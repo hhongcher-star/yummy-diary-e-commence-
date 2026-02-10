@@ -1,0 +1,24 @@
+RewriteEngine On
+
+# =====================================================
+# 🔐 Force HTTPS
+# =====================================================
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [L,R=301]
+
+# =====================================================
+# 🚫 Disable directory listing
+# =====================================================
+Options -Indexes
+
+# =====================================================
+# 🎯 Remove .php extension for ALL PHP files
+# =====================================================
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([^/]+)/?$ $1.php [L,QSA]
+
+# =====================================================
+# Optional: Custom 404 page (you can create 404.php)
+# =====================================================
+ErrorDocument 404 /404.php
