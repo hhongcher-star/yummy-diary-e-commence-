@@ -123,7 +123,30 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['add_product'])) {
     $image_url=uploadImage('image');
     $stmt=$pdo->prepare("INSERT INTO products (sku,name,price,stock,category,image_url,sort_order,created_at) VALUES (?,?,?,?,?,?,?,NOW())");
     $stmt->execute([$sku,$name,$price,$stock,$category,$image_url,$sort_order]);
+
+    // STEP 4: Save logic for 'is_hot'
+    // $is_hot = isset($_POST['is_hot']) ? 1 : 0;
+
+    // Update the database to save the 'is_hot' status
+    // $stmt = $pdo->prepare("UPDATE products SET is_hot = ? WHERE id = ?");
+    // $stmt->execute([$is_hot, $product_id]);
+
     header("Location: products.php?key=$secret_key&cat=$category&msg=".urlencode("✅ 商品已添加")); exit;
+}
+
+// ====================
+// 更新 is_hot（🔥最重要）
+// ====================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id']) && !isset($_POST['add_product'])) {
+
+    $id = intval($_POST['id']);
+    $is_hot = isset($_POST['is_hot']) ? 1 : 0;
+
+    $stmt = $pdo->prepare("UPDATE products SET is_hot=? WHERE id=?");
+    $stmt->execute([$is_hot, $id]);
+
+    header("Location: products.php?key=$secret_key&cat=$cat");
+    exit;
 }
 
 // ====================
@@ -299,10 +322,16 @@ tr:hover{background:#f1f1f1;}
         <td><?= $p['stock'] ?></td>
         <td><?= $p['sort_order'] ?></td>
         <td>
-          <a href="edit_product.php?key=<?= $secret_key ?>&id=<?= $p['id'] ?>" class="btn btn-edit">✏️ 编辑</a>
-          <a href="?key=<?= $secret_key ?>&cat=<?= $cat ?>&move=up&id=<?= $p['id'] ?>" class="btn btn-move">⬆</a>
-          <a href="?key=<?= $secret_key ?>&cat=<?= $cat ?>&move=down&id=<?= $p['id'] ?>" class="btn btn-move">⬇</a>
-          <a href="?key=<?= $secret_key ?>&delete=<?= $p['id'] ?>" class="btn btn-delete" onclick="return confirm('确定删除?')">🗑 删除</a>
+          <form method="post" style="display:inline;">
+            <input type="hidden" name="id" value="<?= $p['id'] ?>">
+            
+            <label>
+              <input type="checkbox" name="is_hot" value="1"
+                <?= $p['is_hot'] ? 'checked' : '' ?>
+                onchange="this.form.submit()">
+              🔥 热销
+            </label>
+          </form>
         </td>
       </tr>
       <?php endforeach; ?>

@@ -11,6 +11,9 @@ $cat = $_GET['cat'] ?? 'moyu';
 // 分类映射（分组）
 // ====================
 $categories = [
+  'hot' => [
+    'label' => '🔥 热销零食'
+  ],
   'snacks' => [
     'label' => '速食小吃',
     'children' => [
@@ -67,8 +70,12 @@ $categories = [
 // ====================
 // 查询该分类下所有商品
 // ====================
-$stmt = $pdo->prepare("SELECT * FROM products WHERE category = ? ORDER BY sort_order ASC, created_at DESC");
-$stmt->execute([$cat]);
+if ($cat === 'hot') {
+    $stmt = $pdo->query("SELECT * FROM products WHERE is_hot = 1 ORDER BY created_at DESC");
+} else {
+    $stmt = $pdo->prepare("SELECT * FROM products WHERE category = ? ORDER BY sort_order ASC, created_at DESC");
+    $stmt->execute([$cat]);
+}
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // ====================
@@ -254,21 +261,36 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
         <aside class="shop-sidebar">
           <ul>
             <?php foreach ($categories as $groupKey => $group): ?>
-              <li>
-                <span class="parent">
-                  <?= $group['label'] ?>
-                  <span class="arrow">▶</span>
-                </span>
-                <ul class="submenu">
-                  <?php foreach ($group['children'] as $key => $label): ?>
-                    <li>
-                      <a href="#" class="cat-link <?= $cat === $key ? 'active' : '' ?>" data-cat="<?= $key ?>">
-                        <?= $label ?>
-                      </a>
-                    </li>
-                  <?php endforeach; ?>
-                </ul>
-              </li>
+
+              <?php if (!isset($group['children'])): ?>
+                <!-- No children (e.g., 热销) -->
+                <li>
+                  <a href="#" 
+                     class="cat-link <?= $cat === $groupKey ? 'active' : '' ?>" 
+                     data-cat="<?= $groupKey ?>">
+                    <?= $group['label'] ?>
+                  </a>
+                </li>
+              <?php else: ?>
+                <!-- Has children (original categories) -->
+                <li>
+                  <span class="parent">
+                    <?= $group['label'] ?>
+                  </span>
+                  <ul class="submenu">
+                    <?php foreach ($group['children'] as $key => $label): ?>
+                      <li>
+                        <a href="#" 
+                           class="cat-link <?= $cat === $key ? 'active' : '' ?>" 
+                           data-cat="<?= $key ?>">
+                          <?= $label ?>
+                        </a>
+                      </li>
+                    <?php endforeach; ?>
+                  </ul>
+                </li>
+              <?php endif; ?>
+
             <?php endforeach; ?>
           </ul>
         </aside>
@@ -277,11 +299,20 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
           <h2 id="category-title">
             <?php
               $currentLabel = '';
-              foreach ($categories as $group) {
+
+              foreach ($categories as $groupKey => $group) {
+
+                // ✅ 如果是没有 children（例如 hot）
+                if ($groupKey === $cat && !isset($group['children'])) {
+                  $currentLabel = $group['label'];
+                }
+
+                // ✅ 有 children 的正常逻辑
                 if (isset($group['children'][$cat])) {
                   $currentLabel = $group['children'][$cat];
                 }
               }
+
               echo $currentLabel ?: '商品';
             ?>
           </h2>
