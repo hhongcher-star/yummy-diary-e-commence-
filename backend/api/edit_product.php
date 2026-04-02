@@ -103,6 +103,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $stock = intval($_POST['stock']);
     $category = $_POST['category'];
     $sort_order = $_POST['sort_order'] !== "" ? intval($_POST['sort_order']) : $p['sort_order'];
+    $is_hot = isset($_POST['is_hot']) ? 1 : 0;
 
     if(!array_key_exists($category,$categories)) $category='other';
 
@@ -127,9 +128,19 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
     // 更新数据库
     $stmt = $pdo->prepare("UPDATE products 
-        SET sku=?, name=?, price=?, stock=?, category=?, image_url=?, sort_order=? 
+        SET sku=?, name=?, price=?, stock=?, category=?, image_url=?, sort_order=?, is_hot=? 
         WHERE id=?");
-    $stmt->execute([$sku,$name,$price,$stock,$category,$image_url,$sort_order,$id]);
+    $stmt->execute([
+        $sku,
+        $name,
+        $price,
+        $stock,
+        $category,
+        $image_url,
+        $sort_order,
+        $is_hot,
+        $id
+    ]);
 
     header("Location: products.php?key=$secret_key&cat=$category&msg=".urlencode("✅ 商品已更新")); 
     exit;
@@ -183,6 +194,11 @@ button:hover{background:#000;color:#fff;}
       <img src="../<?= htmlspecialchars($p['image_url']) ?>" class="thumb">
     <?php endif; ?>
     <input type="file" name="image">
+  </label>
+  <label>
+    🔥 热销:
+    <input type="checkbox" name="is_hot" value="1"
+      <?= $p['is_hot'] ? 'checked' : '' ?>>
   </label>
   <button type="submit">💾 保存修改</button>
 </form>

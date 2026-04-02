@@ -322,6 +322,25 @@ tr:hover{background:#f1f1f1;}
         <td><?= $p['stock'] ?></td>
         <td><?= $p['sort_order'] ?></td>
         <td>
+
+          <!-- ✅ Edit 按钮 -->
+          <a href="edit_product.php?key=<?= $secret_key ?>&id=<?= $p['id'] ?>" 
+             class="btn btn-edit">
+             ✏️ 编辑
+          </a>
+
+        <a href="products.php?key=<?= $secret_key ?>&cat=<?= $cat ?>&move=up&id=<?= $p['id'] ?>" 
+   class="btn btn-move">
+   ⬆
+</a>
+
+          <!-- 🔽 下移 -->
+          <a href="products.php?key=<?= $secret_key ?>&cat=<?= $cat ?>&move=down&id=<?= $p['id'] ?>" 
+   class="btn btn-move">
+   ⬇
+</a>
+
+          <!-- ✅ 热销 -->
           <form method="post" style="display:inline;">
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
             
@@ -329,9 +348,17 @@ tr:hover{background:#f1f1f1;}
               <input type="checkbox" name="is_hot" value="1"
                 <?= $p['is_hot'] ? 'checked' : '' ?>
                 onchange="this.form.submit()">
-              🔥 热销
+              🔥
             </label>
           </form>
+
+          <!-- ✅ 删除 -->
+          <a href="products.php?key=<?= $secret_key ?>&cat=<?= $cat ?>&delete=<?= $p['id'] ?>"
+             class="btn btn-delete"
+             onclick="return confirm('确定删除？')">
+             🗑 删除
+          </a>
+
         </td>
       </tr>
       <?php endforeach; ?>
