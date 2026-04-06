@@ -74,6 +74,7 @@ $lowStock = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <a href="products.php?key=<?= $secret_key ?>">🍪 商品管理</a>
   <a href="inventory.php?key=<?= $secret_key ?>">📦 库存管理</a>
   <a href="orders.php?key=<?= $secret_key ?>">🛒 订单管理</a>
+  <a href="hot_products.php?key=<?= $secret_key ?>">💡 热销管理</a>
   <a href="promotions.php?key=<?= $secret_key ?>">💡 优惠管理</a>
   <div class="logout"><a href="logout.php?key=<?= $secret_key ?>">退出登录</a></div>
 </div>

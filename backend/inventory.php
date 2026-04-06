@@ -170,11 +170,12 @@ tr:nth-child(even){background:#f9f9f9;}
 
 <!-- 左侧导航 -->
 <div class="sidebar">
-  <h2>📦 Yummy Diary</h2>
-  <a href="dashboard.php?key=<?= $secret_key ?>">📊 仪表盘</a>
+  <h2>🍪 Yummy Diary</h2>
+  <a href="dashboard.php?key=<?= $secret_key ?>" >📊 仪表盘</a>
   <a href="products.php?key=<?= $secret_key ?>">🍪 商品管理</a>
   <a href="inventory.php?key=<?= $secret_key ?>" class="active">📦 库存管理</a>
   <a href="orders.php?key=<?= $secret_key ?>">🛒 订单管理</a>
+  <a href="hot_products.php?key=<?= $secret_key ?>">💡 热销管理</a>
   <a href="promotions.php?key=<?= $secret_key ?>">💡 优惠管理</a>
   <div class="logout"><a href="logout.php?key=<?= $secret_key ?>">退出登录</a></div>
 </div>

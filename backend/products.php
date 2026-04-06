@@ -142,10 +142,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id']) && !isset($_POS
     $id = intval($_POST['id']);
     $is_hot = isset($_POST['is_hot']) ? 1 : 0;
 
-    $stmt = $pdo->prepare("UPDATE products SET is_hot=? WHERE id=?");
-    $stmt->execute([$is_hot, $id]);
+    if ($is_hot) {
+
+        // 🔥 Find the current maximum hot_order
+        $stmt = $pdo->query("SELECT MAX(hot_order) FROM products WHERE is_hot=1");
+        $max = $stmt->fetchColumn();
+        $new_order = $max ? $max + 1 : 1;
+
+        // 🔥 Assign hot_order
+        $stmt = $pdo->prepare("UPDATE products SET is_hot=1, hot_order=? WHERE id=?");
+        $stmt->execute([$new_order, $id]);
+
+    } else {
+
+        // ❌ Remove from hot products
+        $stmt = $pdo->prepare("UPDATE products SET is_hot=0, hot_order=0 WHERE id=?");
+        $stmt->execute([$id]);
+    }
+
+    // 🔥 Handle AJAX requests
+    if (isset($_GET['ajax'])) {
+        echo json_encode(['status' => 'ok']);
+        exit;
+    }
 
     header("Location: products.php?key=$secret_key&cat=$cat");
+    exit;
+}
+
+// ====================
+// 🔥 热销排序
+// ====================
+if (isset($_GET['hot_move'], $_GET['id'])) {
+  header('Content-Type: application/json');
+
+    $id = intval($_GET['id']);
+    $move = $_GET['hot_move'];
+
+    $stmt = $pdo->prepare("SELECT * FROM products WHERE id=? AND is_hot=1");
+    $stmt->execute([$id]);
+    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($product) {
+
+        $current = (int)$product['hot_order'];
+
+        if ($move === 'up') {
+            $stmt = $pdo->prepare("
+                SELECT * FROM products 
+                WHERE is_hot=1 AND hot_order < ? 
+                ORDER BY hot_order DESC LIMIT 1
+            ");
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT * FROM products 
+                WHERE is_hot=1 AND hot_order > ? 
+                ORDER BY hot_order ASC LIMIT 1
+            ");
+        }
+
+        $stmt->execute([$current]);
+        $target = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($target) {
+            $pdo->beginTransaction();
+
+            $pdo->prepare("UPDATE products SET hot_order=? WHERE id=?")
+                ->execute([$target['hot_order'], $product['id']]);
+
+            $pdo->prepare("UPDATE products SET hot_order=? WHERE id=?")
+                ->execute([$current, $target['id']]);
+
+            $pdo->commit();
+        }
+    }
+
+    // ====================
+    // 🔥 重新整理 hot_order
+    // ====================
+    $stmt = $pdo->query("SELECT id FROM products WHERE is_hot=1 ORDER BY hot_order ASC");
+    $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    foreach ($ids as $i => $pid) {
+        $pdo->prepare("UPDATE products SET hot_order=? WHERE id=?")
+            ->execute([$i+1, $pid]);
+    }
+
+    // 🔥 回传最新数据
+    $stmt = $pdo->query("SELECT id,name,price,image_url,hot_order FROM products WHERE is_hot=1 ORDER BY hot_order ASC");
+
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
     exit;
 }
 
@@ -270,9 +356,10 @@ tr:hover{background:#f1f1f1;}
 <div class="sidebar">
   <h2>🍪 Yummy Diary</h2>
   <a href="dashboard.php?key=<?= $secret_key ?>">📊 仪表盘</a>
-  <a href="products.php?key=<?= $secret_key ?>" class="active">🍪 商品管理</a>
+  <a href="products.php?key=<?= $secret_key ?>"class="active">🍪 商品管理</a>
   <a href="inventory.php?key=<?= $secret_key ?>">📦 库存管理</a>
   <a href="orders.php?key=<?= $secret_key ?>">🛒 订单管理</a>
+  <a href="hot_products.php?key=<?= $secret_key ?>">💡 热销管理</a>
   <a href="promotions.php?key=<?= $secret_key ?>">💡 优惠管理</a>
   <div class="logout"><a href="logout.php?key=<?= $secret_key ?>">退出登录</a></div>
 </div>
