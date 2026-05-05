@@ -208,30 +208,6 @@ th { background:#f5f5f5; }
     <div class="btn-row">
       <a href="index.php?confirm=1" class="btn-short"><i class="fas fa-check"></i> <strong>确认订单</strong> </a>
       <button id="downloadPdf" class="btn-short"><i class="fas fa-file-pdf"></i> PDF</button>
-      <button id="openPoster" class="btn-short"><i class="fas fa-image"></i> 海报</button>
-    </div>
-  </div>
-
-  <!-- 🎨 海报弹窗 -->
-  <div id="posterModal" class="modal">
-    <div class="modal-content">
-      <h3 class="handwritten">谢谢你！</h3>
-      <div id="poster" class="modal-poster">
-        <div class="modal-left">
-          <img src="images/猫_购物袋.jpg" alt="Yummy Diary">
-        </div>
-        <div class="modal-right">
-          <p class="handwritten" style="font-size:16px; color:#555; margin-bottom:10px;">Yummy Diary </p>
-          <p class="handwritten" style="font-size:18px;">世界催促你长大，</p>
-          <p class="handwritten" style="font-size:18px;">但零食偷偷告诉你: 做个孩子也没关系</p>
-          <p class="handwritten" style="margin-top:15px; font-size:17px;">谢谢你, 宠爱自己的每一个瞬间</p>
-          <p style="margin-top:10px; font-size:14px; color:#888;">⏰ 下单时间：<?= $timeFormatted ?></p>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button onclick="closePoster()">关闭</button>
-        <button onclick="downloadPoster()">下载海报</button>
-      </div>
     </div>
   </div>
 
@@ -250,28 +226,6 @@ th { background:#f5f5f5; }
       pdf.save("YummyDiary-Receipt.pdf");
     });
   });
-
-  window.addEventListener("load", () => {
-    document.getElementById("posterModal").style.display = "flex";
-  });
-
-  document.getElementById("openPoster").addEventListener("click", () => {
-    document.getElementById("posterModal").style.display = "flex";
-  });
-
-  function closePoster() {
-    document.getElementById("posterModal").style.display = "none";
-  }
-
-  function downloadPoster() {
-    const poster = document.getElementById("poster");
-    html2canvas(poster, { scale: 2 }).then(canvas => {
-      const link = document.createElement("a");
-      link.download = "YummyDiary-Poster.png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    });
-  }
   </script>
 </body>
 </html>
