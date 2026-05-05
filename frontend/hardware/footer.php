@@ -160,11 +160,15 @@ function updateCartUI(data) {
 
   // 运费算法
   let shipping_cost = 7.50;
-  if (total >= 27.90) {
-    shipping_cost = 1.90;
-  } else if (total >= 18.90) {
-    shipping_cost = 4.00;
-  }
+  if (total >= 49.90) {
+  shipping_cost = 0.00;
+} else if (total >= 39.90) {
+  shipping_cost = 1.90;
+} else if (total >= 29.90) {
+  shipping_cost = 3.50;
+} else if (total >= 19.90) {
+  shipping_cost = 5.90;
+}
   const grand_total = total + shipping_cost;
 
   // 渲染

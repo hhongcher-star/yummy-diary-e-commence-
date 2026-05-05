@@ -151,21 +151,30 @@ th { background:#f5f5f5; }
                   <td>".number_format($subtotal,2)."</td>
                 </tr>";
       }
+$shipping_cost = 7.50;
+$gifts = [];
 
-      $shipping_cost = 7.50;
-      $gifts = [];
-      if ($total >= 27.90) {
-          $shipping_cost = 1.90;
-          $shipping_msg = "📦 配套 1：运费 RM1.90<br>🎁 赠品：1 包迷你魔芋爽 + 1 个线条小狗挂件";
-          $gifts[] = "魔芋爽";
-          $gifts[] = "线条小狗挂件";
-      } elseif ($total >= 18.90) {
-          $shipping_cost = 4.00;
-          $shipping_msg = "📦 配套 2：运费 RM".number_format($shipping_cost,2)."<br>🎁 赠品：1 包迷你魔芋爽";
-          $gifts[] = "魔芋爽";
-      } else {
-          $shipping_msg = "📌 运费 RM".number_format($shipping_cost,2);
-      }
+if ($total >= 49.90) {
+    $shipping_cost = 0.00;
+    $shipping_msg = "🚚 满 RM49.90：免运<br>🎁 赠品：魔芋爽 + 小挂件";
+    $gifts[] = "魔芋爽";
+    $gifts[] = "小挂件";
+} elseif ($total >= 39.90) {
+    $shipping_cost = 1.90;
+    $shipping_msg = "🚚 满 RM39.90：运费 RM1.90<br>🎁 赠品：魔芋爽 + 小挂件";
+    $gifts[] = "魔芋爽";
+    $gifts[] = "小挂件";
+} elseif ($total >= 29.90) {
+    $shipping_cost = 3.50;
+    $shipping_msg = "🚚 满 RM29.90：运费 RM3.50<br>🎁 赠品：魔芋爽 + 小挂件";
+    $gifts[] = "魔芋爽";
+    $gifts[] = "小挂件";
+} elseif ($total >= 19.90) {
+    $shipping_cost = 5.90;
+    $shipping_msg = "🚚 满 RM19.90：运费 RM5.90";
+} else {
+    $shipping_msg = "🚚 普通运费：RM7.50";
+}
 
       foreach ($gifts as $gift) {
           echo "<tr>
