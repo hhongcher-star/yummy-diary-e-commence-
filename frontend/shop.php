@@ -71,7 +71,7 @@ $categories = [
 // 查询该分类下所有商品
 // ====================
 if ($cat === 'hot') {
-    $stmt = $pdo->query("SELECT * FROM products WHERE is_hot = 1 ORDER BY created_at DESC");
+    $stmt = $pdo->query("SELECT * FROM products WHERE is_hot = 1 ORDER BY hot_order ASC");
 } else {
     $stmt = $pdo->prepare("SELECT * FROM products WHERE category = ? ORDER BY sort_order ASC, created_at DESC");
     $stmt->execute([$cat]);
@@ -150,8 +150,23 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
     .shop-banner { display: flex; justify-content: center; margin-bottom: 15px; }
     .shop-banner img { max-width: 200px; height: auto; }
 
-    .shop-layout { display: grid; grid-template-columns: 180px 1fr; gap: 14px; }
-
+    .shop-layout {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 14px;
+      height: calc(100vh - 180px);
+      overflow: hidden;
+    }
+    .shop-sidebar {
+      position: sticky;
+      top: 180px;
+      align-self: flex-start;
+      max-height: calc(100vh - 180px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 6px;
+      -webkit-overflow-scrolling: touch;
+    }
     .shop-sidebar ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
     .shop-sidebar a { display: block; padding: 6px 8px; font-size: 0.85rem; text-decoration: none; color: #333; border-left: 3px solid transparent; transition: 0.2s; }
     .shop-sidebar a.active { border-left: 3px solid #000; font-weight: bold; background: #f7f7f7; }
@@ -173,8 +188,21 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
       align-items: center; user-select: none;
     }
     .shop-sidebar .arrow { display: none; }
+    .shop-sidebar > ul::after {
+  content: "";
+  display: block;
+  height: 120px;
+  flex: 0 0 120px;
+}
 
-    .shop-content { display: flex; flex-direction: column; gap: 16px; }
+    .shop-content {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: calc(100vh - 180px);
+      overflow-y: auto;
+      padding-right: 8px;
+    }
     .product-card { display: flex; align-items: flex-start; justify-content: space-between; padding: 18px; border: 1px solid #eee; border-radius: 10px; background: #fff; }
     .product-info { display: flex; align-items: center; gap: 14px; position: relative; }
     .product-info img { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; }
