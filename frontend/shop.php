@@ -229,46 +229,68 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
     }
     .product-card button:hover:not(:disabled) { background: #000; color: #fff; }
     .product-card button:disabled { border-color:#aaa; color:#aaa; cursor:not-allowed; background:#f1f1f1; }
-    @media (max-width: 768px) {
+@media (max-width: 768px) {
   .shop-layout {
-    grid-template-columns: 120px 1fr; /* 左边缩小，右边扩大 */
+    grid-template-columns: 120px 1fr;
     gap: 10px;
+
+    height: auto;
+    min-height: calc(100vh - 220px);
+    overflow: visible;
   }
 
   .shop-sidebar {
     font-size: 0.8rem;
   }
+
   .shop-sidebar a {
     font-size: 0.75rem;
     padding: 4px 6px;
   }
 
+  .shop-content {
+    max-height: none;
+    overflow-y: visible;
+    padding-bottom: 180px;
+  }
+
+  main {
+    min-width: 0;
+  }
+
   .product-card {
-    flex-direction: column; /* 卡片上下堆叠 */
+    flex-direction: column;
     align-items: flex-start;
   }
+
   .product-info {
-    flex-direction: row; /* 图片+文字并排 */
+    flex-direction: row;
     gap: 10px;
   }
+
   .product-info img {
     width: 70px;
     height: 70px;
   }
+
   .product-text h4 {
     font-size: 0.9rem;
   }
+
   .product-text .price {
     font-size: 0.9rem;
   }
+
   .product-card button {
     align-self: flex-end;
     margin-top: 8px;
     width: 55px;
     height: 32px;
     font-size: 14px;
+    margin-right: 0;
   }
 }
+
   </style>
 </head>
 <body>
