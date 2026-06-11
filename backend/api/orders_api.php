@@ -1,6 +1,4 @@
 <?php
-session_start();
-
 // ====================
 // 开启调试（开发用，生产建议关闭）
 // ====================
@@ -8,17 +6,8 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// ====================
-// 访问密钥
-// ====================
-$secret_key = "u7Xh29LmQpRa45ZtBnYvWc0JfKe8Gs1D";
-if (!isset($_GET['key']) || $_GET['key'] !== $secret_key) {
-    http_response_code(403);
-    echo json_encode(["error" => "❌ 未授权访问"]);
-    exit;
-}
-
-require '../config.php';
+require __DIR__ . '/../auth_admin.php';
+require __DIR__ . '/../../config.php';
 header('Content-Type: application/json');
 
 try {

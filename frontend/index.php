@@ -1,31 +1,8 @@
 <?php
 session_start();
-require 'config.php';
+require __DIR__ . '/../config.php';
 
 // ✅ detect 从收据页回首页
-if (isset($_GET['confirm']) && $_GET['confirm'] == '1') {
-    if (isset($_SESSION['pending_order'])) {
-        $po = $_SESSION['pending_order'];
-
-        $stmt = $pdo->prepare("INSERT INTO orders (order_number, created_at, total, status) VALUES (?, ?, ?, 'pending')");
-        $stmt->execute([$po['order_number'], $po['created_at'], $po['total']]);
-        $order_id = $pdo->lastInsertId();
-
-        $stmt_item  = $pdo->prepare("INSERT INTO order_items (order_id, product_name, quantity, price) VALUES (?, ?, ?, ?)");
-        $stmt_stock = $pdo->prepare("UPDATE products SET stock = stock - ? WHERE name = ? AND stock >= ?");
-
-        foreach ($po['items'] as $item) {
-            $stmt_item->execute([$order_id, $item['name'], $item['qty'], $item['price']]);
-            $stmt_stock->execute([$item['qty'], $item['name'], $item['qty']]);
-        }
-
-        unset($_SESSION['pending_order']);
-    }
-
-    unset($_SESSION['cart']);
-    unset($_SESSION['orders']);
-}
-
 // ✅ 手动清理
 if (isset($_GET['clear']) && $_GET['clear'] == '1') {
     unset($_SESSION['cart']);
@@ -52,7 +29,7 @@ if (!isset($_COOKIE['visitor_token'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Yummy Diary</title>
 
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/yummy-diary/css/style.css">
   <meta name="description" content="Yummy Diary - 精选零食、辣条、糖果、文创小物，让生活更有滋味。">
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
@@ -133,16 +110,16 @@ if (!isset($_COOKIE['visitor_token'])) {
 <body>
 
   <div id="loader">
-    <img src="images/loading-dog.png" alt="Loading...">
+    <img src="/yummy-diary/images/loading-dog.png" alt="Loading...">
   </div>
 
   <div id="content">
-    <?php include 'header.php'; ?>
+    <?php include __DIR__ . '/hardware/header.php'; ?>
 
     <!-- 欢迎区 -->
     <section class="hero">
       <div class="hero-img" data-aos="fade-right">
-        <img src="images/33" alt="Yummy Diary Dog">
+        <img src="/yummy-diary/images/33" alt="Yummy Diary Dog">
       </div>
       <div class="hero-text" data-aos="fade-left">
         <h1>
@@ -162,7 +139,7 @@ if (!isset($_COOKIE['visitor_token'])) {
       <!-- 第一张 -->
       <div class="card" data-aos="fade-up">
         <div class="card-img">
-          <img src="images/34" alt="零食小店">
+          <img src="/yummy-diary/images/34" alt="零食小店">
         </div>
         <div class="card-text">
           <p><strong>🚚 运费大折扣</strong><br>
@@ -185,7 +162,7 @@ if (!isset($_COOKIE['visitor_token'])) {
       <div class="card reverse" data-aos="fade-up" data-aos-delay="200">
         <div class="card-img">
           <!-- 小猫图放这里 -->
-          <img src="images/35" alt="超值优惠小猫">
+          <img src="/yummy-diary/images/35" alt="超值优惠小猫">
         </div>
         <div class="card-text">
           <strong> 欢迎光临—Yummydiary 零食小店</strong> 
@@ -213,7 +190,7 @@ if (!isset($_COOKIE['visitor_token'])) {
       <!-- 第三张 -->
       <div class="card" data-aos="fade-up" data-aos-delay="400">
         <div class="card-img">
-          <img src="images/36" alt="运费大优惠">
+          <img src="/yummy-diary/images/36" alt="运费大优惠">
         </div>
         <div class="card-text">
           <strong> 📌 超值优惠来啦！</strong>
@@ -236,7 +213,7 @@ if (!isset($_COOKIE['visitor_token'])) {
       </div>
     </section>
 
-    <?php include 'footer.php'; ?>
+    <?php include __DIR__ . '/hardware/footer.php'; ?>
   </div>
 
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>

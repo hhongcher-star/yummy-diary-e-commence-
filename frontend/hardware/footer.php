@@ -11,7 +11,7 @@ if (session_status() === PHP_SESSION_NONE) {
 <!-- 🛍 固定底部购物车按钮 -->
 <div class="cart-fab" id="cartFab">
   <div class="cart-inner">
-    <img src="images/猫_购物袋.jpg" alt="购物车" class="cart-img" width="52" height="52" loading="lazy">
+    <img src="/yummy-diary/images/猫_购物袋.jpg" alt="购物车" class="cart-img" width="52" height="52" loading="lazy">
   </div>
   <span class="cart-badge" style="display:none;">0</span>
 </div>
@@ -95,7 +95,7 @@ body::after { content:""; display:block; height:var(--footer-space,0px); }
 
 <script defer>
 function getCartAndUpdate() {
-  return fetch("add_to_cart.php?mode=getCart")
+  return fetch("api/add_to_cart.php?mode=getCart")
     .then(res => res.json())
     .then(data => { if (data.success) updateCartUI(data); return data; })
     .catch(err => console.error("getCart failed", err));
@@ -134,7 +134,7 @@ function updateCartUI(data) {
 
     listHtml += `
     <li class="cart-item" data-sku="${item.sku}">
-      <img src="${item.img}" alt="${item.name}" class="cart-thumb">
+      <img src="/yummy-diary/${item.img}" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" alt="${item.name}" class="cart-thumb">
       <div class="cart-info">
         <div class="cart-name">[${item.sku}] ${item.name}</div>
         <div class="cart-meta">
@@ -199,7 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fd.append("name", t.dataset.name);
       fd.append("price", t.dataset.price);
       fd.append("img", t.dataset.img);
-      const url = t.classList.contains("dec") ? "add_to_cart.php?mode=removeOne" : "add_to_cart.php";
+      const url = t.classList.contains("dec") ? "api/add_to_cart.php?mode=removeOne" : "api/add_to_cart.php";
       fetch(url, { method:"POST", body: fd })
         .then(r => r.json())
         .then(d => updateCartUI(d))
@@ -211,7 +211,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const clearBtn = document.getElementById("clearCartBtn");
   if (clearBtn) {
     clearBtn.addEventListener("click", () => {
-      fetch("add_to_cart.php?mode=clear")
+      fetch("api/add_to_cart.php?mode=clear")
         .then(r => r.json())
         .then(d => updateCartUI(d));
     });
@@ -221,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const checkoutBtn = document.getElementById("checkoutBtn");
   if (checkoutBtn) {
     checkoutBtn.addEventListener("click", () => {
-      fetch("checkout.php", { method:"POST" })
+      fetch("api/checkout.php", { method:"POST" })
         .then(r => r.json())
         .then(d => {
           if (d.success) {

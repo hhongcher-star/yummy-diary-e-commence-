@@ -17,7 +17,7 @@ body {
   flex-direction: column;
 }
 
-.sidebar .logo {
+.sidebar h2 {
   background: #000;
   color: #fff;
   padding: 18px;
@@ -26,7 +26,7 @@ body {
   text-align: center;
 }
 
-.sidebar nav a {
+.sidebar > a {
   display: block;
   padding: 14px 20px;
   text-decoration: none;
@@ -34,11 +34,11 @@ body {
   border-bottom: 1px solid #eee;
 }
 
-.sidebar nav a:hover {
+.sidebar > a:hover {
   background: #f5f5f5;
 }
 
-.sidebar nav a.active {
+.sidebar > a.active {
   background: #000;
   color: #fff;
 }
@@ -46,6 +46,21 @@ body {
 main {
   margin-left: 240px;
   padding: 20px;
+}
+
+.sidebar .logout {
+  margin-top: auto;
+  padding: 15px;
+}
+
+.sidebar .logout a {
+  display: block;
+  padding: 10px;
+  text-align: center;
+  background: #000;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 6px;
 }
 
 /* 手机端适配 */
@@ -57,8 +72,8 @@ main {
     flex-direction: row;
     border-bottom: 2px solid #000;
   }
-  .sidebar .logo { flex: 1; text-align: left; font-size: 14px; }
-  .sidebar nav { flex: 3; display: flex; }
-  .sidebar nav a { flex: 1; text-align: center; font-size: 13px; }
+  .sidebar h2 { display: none; }
+  .sidebar > a { flex: 1 0 auto; text-align: center; font-size: 13px; }
+  .sidebar .logout { display: none; }
   main { margin-left: 0; margin-top: 80px; }
 }

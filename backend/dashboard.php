@@ -1,17 +1,10 @@
 <?php
-session_start();
+require __DIR__ . '/auth_admin.php';
+require __DIR__ . '/../config.php';
 
-$secret_key = "u7Xh29LmQpRa45ZtBnYvWc0JfKe8Gs1D";
-if (!isset($_GET['key']) || $_GET['key'] !== $secret_key) {
-    die("❌ 未授权访问");
-}
+date_default_timezone_set('Asia/Kuala_Lumpur');
 
-if (!isset($_SESSION['admin_id'])) {
-    header("Location: login.php?key=$secret_key");
-    exit;
-}
-
-require '../config.php';
+$username = $_SESSION['admin_username'];
 date_default_timezone_set("Asia/Kuala_Lumpur");
 
 $username = $_SESSION['admin_username'];
@@ -25,119 +18,55 @@ $lowStock = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Yummy Diary 后台管理</title>
+<link rel="stylesheet" href="/yummy-diary/backend/css/admin_layout.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #fafafa; color: #000; }
-.sidebar { width:220px; background:#fff; border-right:2px solid #000; height:100vh; position:fixed; top:0; left:0; display:flex; flex-direction:column; }
-.sidebar h2 { background:#000; color:#fff; padding:15px; text-align:center; margin:0; font-size:16px; }
-.sidebar a { display:block; padding:12px 20px; color:#000; text-decoration:none; border-bottom:1px solid #eee; }
-.sidebar a:hover { background:#eee; }
-.sidebar a.active { background:#000; color:#fff; }
-.logout { margin:15px; text-align:center; }
-.logout a { background:#000; color:#fff; padding:8px 12px; border-radius:6px; text-decoration:none; display:inline-block; }
-.logout a:hover { background:#333; }
-
-main { margin-left:240px; padding:20px; }
-
-.card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    border: 1px solid #000;
-    margin-bottom: 20px;
-    box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
-}
-
-.card h2 { margin-top: 0; color: #000; font-size: 18px; }
-
-.stats-container {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-    margin-bottom: 15px;
-}
-
-.stat-box {
-    flex: 1;
-    min-width: 140px;
-    background:#f5f5f5;
-    padding:20px;
-    border-radius:10px;
-    text-align:center;
-    border:1px solid #000;
-}
-
-.stat-box h3 { margin: 0 0 8px; font-size: 16px; }
-.stat-box p { font-size: 28px; font-weight: bold; margin: 5px 0; }
-
-.filter-row {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 15px;
-}
-
-.filter-row select {
-    padding: 9px 12px;
-    border: 1px solid #000;
-    border-radius: 8px;
-    background: #fff;
-}
-
-.warning-list { margin:0; padding-left:18px; color:#856404; }
-.warning-list li { margin-bottom:6px; }
-
-@media (max-width: 768px) {
-    main{margin-left:0;padding:15px;margin-top:120px;}
-    .sidebar{position:relative;width:100%;height:auto;border-right:none;border-bottom:2px solid #000;flex-direction:row;overflow-x:auto;}
-    .sidebar h2{display:none;}
-    .sidebar a{flex:1 0 auto;border-bottom:none;border-right:1px solid #eee;font-size:13px;padding:10px;text-align:center;}
-    .logout{display:none;}
-    .stats-container{flex-direction:column;}
-    .stat-box{font-size:14px;padding:15px;}
-    .stat-box p{font-size:22px;}
-    canvas{max-width:100%; height:auto !important;}
-}
+  .dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;}
+  .stat-box{background:#fffaf4;border:1px solid var(--line);border-radius:20px;padding:22px;text-align:center;}
+  .stat-box h3{margin:0 0 10px;color:var(--muted);font-size:15px;}
+  .stat-box p{margin:0;font-size:30px;font-weight:800;color:var(--text);} 
+  .filter-row{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0 18px;}
+  .warning-card{background:#fff8e8;border-color:#f0dfbd;}
+  .warning-list{margin:0;padding-left:20px;color:#8a6428;line-height:1.9;}
+  .dashboard-table{width:100%;border-collapse:separate;border-spacing:0 10px;}
+  .dashboard-table th,.dashboard-table td{padding:13px 14px;text-align:center;}
+  canvas{margin-top:14px;}
 </style>
 </head>
 
 <body>
 
-<div class="sidebar">
-  <h2>🍪 Yummy Diary</h2>
-  <a href="dashboard.php?key=<?= $secret_key ?>" class="active">📊 仪表盘</a>
-  <a href="products.php?key=<?= $secret_key ?>">🍪 商品管理</a>
-  <a href="inventory.php?key=<?= $secret_key ?>">📦 库存管理</a>
-  <a href="orders.php?key=<?= $secret_key ?>">🛒 订单管理</a>
-  <a href="hot_products.php?key=<?= $secret_key ?>">💡 热销管理</a>
-  <a href="promotions.php?key=<?= $secret_key ?>">💡 优惠管理</a>
-  <div class="logout"><a href="logout.php?key=<?= $secret_key ?>">退出登录</a></div>
-</div>
+<?php include __DIR__ . '/includes/sidebar.php'; ?>
 
 <main>
-    <div class="card">
-        <h2>欢迎回来，<?= htmlspecialchars($username) ?> 🎉</h2>
-        <p>这是 Yummy Diary 的后台首页。</p>
-    </div>
+    <section class="page-header">
+        <div class="page-title">
+            <h2>仪表盘</h2>
+            <p>欢迎回来，<?= htmlspecialchars($username) ?>，查看销售、订单、访客和库存提醒</p>
+        </div>
+    </section>
+
+    <section class="admin-card">
+        <h2 style="margin-top:0;">欢迎回来，<?= htmlspecialchars($username) ?> 🎉</h2>
+        <p style="margin-bottom:0;">这是 Yummy Diary 的后台首页。</p>
+    </section>
 
     <?php if ($lowStock): ?>
-    <div class="card" style="background:#fff3cd; border-color:#ffeeba;">
-        <h2>⚠️ 库存不足提醒</h2>
+    <section class="admin-card warning-card">
+        <h2 style="margin-top:0;">⚠️ 库存不足提醒</h2>
         <ul class="warning-list">
           <?php foreach($lowStock as $item): ?>
-            <li><?= htmlspecialchars($item['name']) ?> 
-              （库存 <?= $item['stock'] ?>/预警 <?= $item['warning_level'] ?>）
-            </li>
+            <li><?= htmlspecialchars($item['name']) ?> （库存 <?= $item['stock'] ?>/预警 <?= $item['warning_level'] ?>）</li>
           <?php endforeach; ?>
         </ul>
-        <p><a href="inventory.php?key=<?= $secret_key ?>&cat=lowstock">👉 查看全部库存不足</a></p>
-    </div>
+        <p style="margin-bottom:0;"><a href="inventory.php?cat=lowstock">👉 查看全部库存不足</a></p>
+    </section>
     <?php endif; ?>
 
-    <!-- ✅ 销售额区域：只服务销售额 -->
-    <div class="card">
-        <h2>📊 销售额概览</h2>
+    <!-- ✅ 销售额区域 -->
+    <section class="admin-card">
+        <h2 style="margin-top:0;">📊 销售额概览</h2>
 
         <div class="filter-row">
             <select id="periodFilter">
@@ -178,8 +107,8 @@ main { margin-left:240px; padding:20px; }
     </div>
 
     <!-- ✅ 商品销售分析 -->
-    <div class="card">
-        <h2>🏆 商品销售分析</h2>
+    <section class="admin-card">
+        <h2 style="margin-top:0;">🏆 商品销售分析</h2>
 
         <div class="filter-row">
             <select id="productPeriodFilter">
@@ -232,8 +161,8 @@ main { margin-left:240px; padding:20px; }
     </div>
 
     <!-- ✅ 今日订单移到这里 -->
-    <div class="card">
-        <h2>📈 最近 7 天订单 & 销售额趋势</h2>
+    <section class="admin-card">
+        <h2 style="margin-top:0;">📈 最近 7 天订单 & 销售额趋势</h2>
 
         <div class="stats-container">
             <div class="stat-box">
@@ -246,8 +175,8 @@ main { margin-left:240px; padding:20px; }
     </div>
 
     <!-- ✅ 累计访客移到这里 -->
-    <div class="card">
-        <h2>👥 最近 7 天访客趋势</h2>
+    <section class="admin-card">
+        <h2 style="margin-top:0;">👥 最近 7 天访客趋势</h2>
 
         <div class="stats-container">
             <div class="stat-box">
@@ -270,7 +199,7 @@ function loadSalesSummary() {
     document.getElementById("monthFilter").style.display =
         period === "custom_month" ? "inline-block" : "none";
 
-    fetch(`orders_api.php?key=<?= $secret_key ?>&type=sales_summary&period=${period}&month=${month}&year=${year}`)
+    fetch(`api/orders_api.php?type=sales_summary&period=${period}&month=${month}&year=${year}`)
         .then(res => res.json())
         .then(data => {
             document.getElementById("salesTitle").innerText = data.title;
@@ -290,7 +219,7 @@ loadSalesSummary();
 
 // ✅ 加载商品分类
 function loadProductCategories() {
-    fetch(`product_api.php?key=<?= $secret_key ?>&type=categories`)
+    fetch(`api/product_api.php?type=categories`)
         .then(res => res.json())
         .then(data => {
             const select = document.getElementById("productCategoryFilter");
@@ -320,8 +249,8 @@ function loadProductAnalysis() {
         period === "custom_month" ? "inline-block" : "none";
 
     Promise.all([
-        fetch(`orders_api.php?key=<?= $secret_key ?>&type=product_analysis&period=${period}&month=${month}&year=${year}&sort=${sort}&limit=50`).then(res => res.json()),
-        fetch(`product_api.php?key=<?= $secret_key ?>&type=product_map`).then(res => res.json())
+        fetch(`api/orders_api.php?type=product_analysis&period=${period}&month=${month}&year=${year}&sort=${sort}&limit=50`).then(res => res.json()),
+        fetch(`api/product_api.php?type=product_map`).then(res => res.json())
     ])
     .then(([orderData, productData]) => {
         const box = document.getElementById("productAnalysisTable");
@@ -410,7 +339,7 @@ loadProductAnalysis();
 
 
 // ✅ 今日订单
-fetch("orders_api.php?key=<?= $secret_key ?>")
+fetch("api/orders_api.php")
   .then(res => res.json())
   .then(data => {
     document.getElementById("todayOrders").innerText = data.today_orders;
@@ -421,7 +350,7 @@ fetch("orders_api.php?key=<?= $secret_key ?>")
 
 
 // ✅ 订单 & 销售额趋势
-fetch("orders_api.php?key=<?= $secret_key ?>&type=trend")
+fetch("api/orders_api.php?type=trend")
   .then(res => res.json())
   .then(data => {
     const ctx = document.getElementById("salesChart").getContext("2d");
@@ -475,7 +404,7 @@ fetch("orders_api.php?key=<?= $secret_key ?>&type=trend")
 
 
 // ✅ 访客趋势
-fetch("visitors_api.php?key=<?= $secret_key ?>&type=trend")
+fetch("api/visitors_api.php?type=trend")
   .then(res => res.json())
   .then(data => {
     document.getElementById("totalVisitors").innerText = data.total_visitors;

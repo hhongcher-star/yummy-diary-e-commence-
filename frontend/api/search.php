@@ -1,6 +1,6 @@
 <?php
 session_start();
-require 'config.php';
+require __DIR__ . '/../../config.php';
 
 $q = trim($_GET['q'] ?? '');
 $products = [];
@@ -35,7 +35,7 @@ if ($q !== '') {
 <meta charset="UTF-8">
 <title>搜索结果 - <?= htmlspecialchars($q, ENT_QUOTES) ?> | Yummy Diary</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="/yummy-diary/css/style.css">
 <style>
 .search-wrapper { max-width: 1000px; margin: 20px auto; padding: 15px; }
 .search-wrapper h2 { margin-bottom: 15px; font-size: 1.2rem; }
@@ -72,7 +72,7 @@ if ($q !== '') {
 </head>
 <body>
 
-<?php include 'header.php'; ?>
+<?php include __DIR__ . '/../hardware/header.php'; ?>
 
 <div class="search-wrapper">
   <h2>🔍 搜索结果：<?= htmlspecialchars($q, ENT_QUOTES) ?></h2>
@@ -84,7 +84,7 @@ if ($q !== '') {
             <?php if ($p['stock'] <= 0): ?>
               <div class="soldout-tag">SOLD OUT</div>
             <?php endif; ?>
-            <img src="<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
+            <img src="/yummy-diary/<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
             <div class="product-text">
               <h4>[<?= htmlspecialchars($p['sku'], ENT_QUOTES) ?>] <?= htmlspecialchars($p['name'], ENT_QUOTES) ?></h4>
               <p>库存：<?= (int)$p['stock'] ?></p>
@@ -119,7 +119,7 @@ if ($q !== '') {
   </div>
 </div>
 
-<?php include 'footer.php'; ?>
+<?php include __DIR__ . '/../hardware/footer.php'; ?>
 
 <script>
 // ✅ 复用购物车逻辑（footer 里的 updateCartUI）+ 加库存检测

@@ -4,6 +4,7 @@ RewriteEngine On
 # 🔐 Force HTTPS
 # =====================================================
 RewriteCond %{HTTPS} off
+RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:\d+)?$ [NC]
 RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [L,R=301]
 
 # =====================================================

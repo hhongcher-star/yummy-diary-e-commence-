@@ -1,70 +1,47 @@
 <?php
 session_start(); 
-require 'config.php';
+require __DIR__ . '/../config.php';
 
 // ====================
-// 当前分类（默认第一个：魔芋爽）
+// 当前分类（默认热销）
 // ====================
 $cat = $_GET['cat'] ?? 'hot';
 
-// ====================
-// 分类映射（分组）
-// ====================
+$stmt = $pdo->query("SELECT
+    g.group_key,
+    g.label AS group_label,
+    c.category_key,
+    c.name AS category_name
+  FROM category_groups g
+  JOIN product_categories c ON c.group_id = g.id
+  WHERE g.status = 1 AND c.status = 1
+  ORDER BY g.sort_order ASC, c.sort_order ASC");
+
 $categories = [
   'hot' => [
     'label' => '🔥 热销零食'
-  ],
-  'snacks' => [
-    'label' => '速食小吃',
-    'children' => [
-      'moyu'     => '魔芋爽',
-      'xieliu'   => '蟹柳',
-      'egg'      => '鹌鹑蛋',
-      'tofu'     => '鱼豆腐',
-      'latiao'   => '辣条',
-      'jinzhen'  => '金针菇',
-      'tudoupian'=> '土豆片',
-      'lianou'   => '莲藕片',
-      'moyu2'     => '魔芋',
-      'haidai'   => '海带',
-      'other'    => '其他'
-    ]
-  ],
-
-  'meals' => [
-    'label' => '粉类/速食主食',
-    'children' => [
-      'noodle'   => '酸辣粉',
-      'luosifen' => '螺蛳粉',
-      'hotpot'   => '自热火锅'
-
-    ]
-  ],
-
-  'candy' => [
-    'label' => '糖果',
-    'children' => [
-      'qqcandy'  => 'QQ糖果',
-      'coffee'   => '咖啡糖',
-      'other1'    => '其他'
-    ]
-  ],
-
-  'chips' => [
-    'label' => '脆片坚果类',
-    'children' => [
-      'lays'  => 'Lays 薯片',
-      'other2' => '其他'   
-    ]
-  ],
-
-  'creative' => [
-    'label' => '文创小物',
-    'children' => [
-      'creative' => '文创小物'
-    ]
   ]
 ];
+
+$flatCategories = [];
+
+while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $groupKey = $row['group_key'];
+
+    if (!isset($categories[$groupKey])) {
+        $categories[$groupKey] = [
+            'label' => $row['group_label'],
+            'children' => []
+        ];
+    }
+
+    $categories[$groupKey]['children'][$row['category_key']] = $row['category_name'];
+
+    $flatCategories[$row['category_key']] = [
+        'group' => $row['group_label'],
+        'name' => $row['category_name']
+    ];
+}
 
 
 // ====================
@@ -90,7 +67,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
               <?php if ($p['stock'] <= 0): ?>
                 <div class="soldout-tag">SOLD OUT</div>
               <?php endif; ?>
-              <img src="<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
+              <img src="/yummy-diary/<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
               <div class="product-text">
                 <h4><?= htmlspecialchars($p['name'], ENT_QUOTES) ?></h4>
                 <?php if (!empty($p['sku'])): ?>
@@ -126,7 +103,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shop - Yummy Diary</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/yummy-diary/css/style.css">
 
   <style>
     /* ========= Loader 动画 ========= */
@@ -296,15 +273,15 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
 <body>
 
   <div id="loader">
-    <img src="images/5" alt="Loading...">
+    <img src="/yummy-diary/images/5" alt="Loading...">
   </div>
 
   <div id="content">
-    <?php include 'header.php'; ?>
+    <?php include __DIR__ . '/hardware/header.php'; ?>
 
     <div class="shop-wrapper">
       <div class="shop-banner">
-        <img src="images/41" alt="Menu">
+        <img src="/yummy-diary/images/41" alt="Menu">
       </div>
 
       <div class="shop-layout">
@@ -350,17 +327,10 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
             <?php
               $currentLabel = '';
 
-              foreach ($categories as $groupKey => $group) {
-
-                // ✅ 如果是没有 children（例如 hot）
-                if ($groupKey === $cat && !isset($group['children'])) {
-                  $currentLabel = $group['label'];
-                }
-
-                // ✅ 有 children 的正常逻辑
-                if (isset($group['children'][$cat])) {
-                  $currentLabel = $group['children'][$cat];
-                }
+              if ($cat === 'hot') {
+                  $currentLabel = '🔥 热销零食';
+              } elseif (isset($flatCategories[$cat])) {
+                  $currentLabel = $flatCategories[$cat]['group'] . ' / ' . $flatCategories[$cat]['name'];
               }
 
               echo $currentLabel ?: '商品';
@@ -375,7 +345,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
                     <?php if ($p['stock'] <= 0): ?>
                       <div class="soldout-tag">SOLD OUT</div>
                     <?php endif; ?>
-                    <img src="<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
+                    <img src="/yummy-diary/<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
                     <div class="product-text">
                       <h4><?= htmlspecialchars($p['name'], ENT_QUOTES) ?></h4>
                       <?php if (!empty($p['sku'])): ?>
@@ -408,7 +378,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
       </div>
     </div>
 
-    <?php include 'footer.php'; ?>
+    <?php include __DIR__ . '/hardware/footer.php'; ?>
   </div>
 
   <!-- Loader 动画控制 -->
@@ -480,7 +450,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
         formData.append("price", btn.dataset.price);
         formData.append("img", btn.dataset.img);
 
-        fetch("add_to_cart.php", { method: "POST", body: formData })
+        fetch("api/add_to_cart.php", { method: "POST", body: formData })
         .then(res => res.json())
         .then(data => {
           if (data.success && typeof updateCartUI === "function") {

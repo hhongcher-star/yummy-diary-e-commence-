@@ -1,25 +1,16 @@
 <?php
 session_start();
-require 'config.php';
+require __DIR__ . '/../config.php';
 date_default_timezone_set("Asia/Kuala_Lumpur");
 
 $order_number = $_GET['order_number'] ?? '';
 if (!$order_number) die("❌ 订单号缺失");
 
-if (isset($_SESSION['pending_order']) && $_SESSION['pending_order']['order_number'] === $order_number) {
-    $po = $_SESSION['pending_order'];
-    $order_data = [
-        "id"    => $po['order_number'],
-        "time"  => $po['created_at'],
-        "items" => $po['items'],
-        "total" => $po['total']
-    ];
-} else {
-    $stmt = $pdo->prepare("SELECT * FROM orders WHERE order_number=?");
-    $stmt->execute([$order_number]);
-    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+$stmt = $pdo->prepare("SELECT * FROM orders WHERE order_number=?");
+$stmt->execute([$order_number]);
+$order = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($order) {
+if ($order) {
         $stmt_items = $pdo->prepare("SELECT * FROM order_items WHERE order_id=?");
         $stmt_items->execute([$order['id']]);
         $items = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
@@ -40,7 +31,6 @@ if (isset($_SESSION['pending_order']) && $_SESSION['pending_order']['order_numbe
     } else {
         die("❌ 找不到订单，请返回重新下单。");
     }
-}
 
 $timeFormatted = date("Y年n月j日 H:i", strtotime($order_data['time']));
 ?>
@@ -128,7 +118,7 @@ th { background:#f5f5f5; }
 <body>
   <div class="header">
     <a href="shop.php" class="back-btn"><i class="fas fa-arrow-left"></i> 返回菜单</a>
-    <img src="images/猫_购物袋.jpg" alt="Yummy Diary">
+    <img src="/yummy-diary/images/猫_购物袋.jpg" alt="Yummy Diary">
     <h2>🧾 Yummy Diary · 订单收据</h2>
   </div>
 
@@ -215,7 +205,7 @@ if ($total >= 49.90) {
     </div>
 
     <div class="btn-row">
-      <a href="index.php?confirm=1" class="btn-short"><i class="fas fa-check"></i> <strong>确认订单</strong> </a>
+      <a href="index.php" class="btn-short"><i class="fas fa-check"></i> <strong>完成</strong></a>
       <button id="downloadPdf" class="btn-short"><i class="fas fa-file-pdf"></i> PDF</button>
     </div>
   </div>

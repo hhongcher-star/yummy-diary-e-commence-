@@ -1,104 +1,175 @@
 <?php
-// 确保 session 开启
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require 'config.php'; // ✅ 数据库连接
+require __DIR__ . '/../../config.php';
 
-// 统一 JSON 返回头
 header('Content-Type: application/json; charset=UTF-8');
 
-// 确保 cart 存在
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
-$mode = $_GET['mode'] ?? 'add'; // 默认模式是 add
+$mode = $_GET['mode'] ?? 'add';
 
-$sku   = trim($_POST['sku'] ?? '');
-$name  = trim($_POST['name'] ?? '');
-$price = floatval($_POST['price'] ?? 0);
-$img   = trim($_POST['img'] ?? '');
+$sku = trim($_POST['sku'] ?? '');
 
 switch ($mode) {
-    case 'getCart': // ✅ 获取购物车
+
+    // ====================
+    // 获取购物车
+    // ====================
+    case 'getCart':
         break;
 
-    case 'removeOne': // ✅ 删除一个商品
+    // ====================
+    // 删除一个商品
+    // ====================
+    case 'removeOne':
+
         foreach ($_SESSION['cart'] as $k => &$item) {
+
             if ((string)$item['sku'] === (string)$sku) {
+
                 $item['qty']--;
+
                 if ($item['qty'] <= 0) {
-                    unset($_SESSION['cart'][$k]); // 数量 <=0 直接删掉
+                    unset($_SESSION['cart'][$k]);
                 }
+
                 break;
             }
         }
+
         unset($item);
-        $_SESSION['cart'] = array_values($_SESSION['cart']); // 重排索引
+
+        $_SESSION['cart'] = array_values($_SESSION['cart']);
+
         break;
 
-    case 'clear': // ✅ 清空购物车
+    // ====================
+    // 清空购物车
+    // ====================
+    case 'clear':
+
         $_SESSION['cart'] = [];
+
         break;
 
-    case 'add': // ✅ 添加商品
+    // ====================
+    // 添加商品
+    // ====================
+    case 'add':
     default:
-        if ($sku !== '' && $name !== '') {
-            // 🔎 查询数据库库存 + id
-            $stmt = $pdo->prepare("SELECT id, stock FROM products WHERE sku = ? LIMIT 1");
-            $stmt->execute([$sku]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            $stock = $row ? (int)$row['stock'] : 0;
-            $product_id = $row ? (int)$row['id'] : 0;
 
-            if ($stock <= 0) {
-                echo json_encode(['success' => false, 'message' => '❌ 库存不足'], JSON_UNESCAPED_UNICODE);
-                exit;
-            }
+        if ($sku === '') {
 
-            $found = false;
-            foreach ($_SESSION['cart'] as &$item) {
-                if ((string)$item['sku'] === (string)$sku) {
-                    if ($item['qty'] < $stock) {
-                        $item['qty']++;
-                    } else {
-                        echo json_encode(['success' => false, 'message' => '⚠️ 已达到库存上限'], JSON_UNESCAPED_UNICODE);
-                        exit;
-                    }
-                    $found = true;
-                    break;
+            echo json_encode([
+                'success' => false,
+                'message' => 'Missing SKU'
+            ], JSON_UNESCAPED_UNICODE);
+
+            exit;
+        }
+
+        // 只从数据库取商品资料
+        $stmt = $pdo->prepare("
+            SELECT
+                id,
+                sku,
+                name,
+                price,
+                image_url,
+                stock
+            FROM products
+            WHERE sku = ?
+            LIMIT 1
+        ");
+
+        $stmt->execute([$sku]);
+
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$product) {
+
+            echo json_encode([
+                'success' => false,
+                'message' => '商品不存在'
+            ], JSON_UNESCAPED_UNICODE);
+
+            exit;
+        }
+
+        $stock = (int)$product['stock'];
+
+        if ($stock <= 0) {
+
+            echo json_encode([
+                'success' => false,
+                'message' => '❌ 库存不足'
+            ], JSON_UNESCAPED_UNICODE);
+
+            exit;
+        }
+
+        $found = false;
+
+        foreach ($_SESSION['cart'] as &$item) {
+
+            if ((string)$item['sku'] === (string)$sku) {
+
+                if ($item['qty'] < $stock) {
+
+                    $item['qty']++;
+
+                } else {
+
+                    echo json_encode([
+                        'success' => false,
+                        'message' => '⚠️ 已达到库存上限'
+                    ], JSON_UNESCAPED_UNICODE);
+
+                    exit;
                 }
-            }
-            unset($item);
 
-            if (!$found) {
-                $_SESSION['cart'][] = [
-                    'id'    => $product_id, // ✅ 保存 product_id
-                    'sku'   => $sku,
-                    'name'  => $name,
-                    'price' => $price,
-                    'img'   => $img,
-                    'qty'   => 1
-                ];
+                $found = true;
+
+                break;
             }
         }
+
+        unset($item);
+
+        if (!$found) {
+
+            $_SESSION['cart'][] = [
+                'id'    => (int)$product['id'],
+                'sku'   => $product['sku'],
+                'name'  => $product['name'],
+                'price' => (float)$product['price'],
+                'img'   => $product['image_url'],
+                'qty'   => 1
+            ];
+        }
+
         break;
 }
 
-// 计算购物车商品总数
+// ====================
+// 计算购物车数量
+// ====================
+
 $itemCount = 0;
+
 foreach ($_SESSION['cart'] as $item) {
     $itemCount += $item['qty'];
 }
 
-// 返回 JSON 给前端
 echo json_encode([
     'success' => true,
     'count'   => $itemCount,
     'cart'    => array_values($_SESSION['cart'])
 ], JSON_UNESCAPED_UNICODE);
 
-exit; 
-
+exit;

@@ -1,93 +1,51 @@
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-session_start();
-
-// ====================
-// 访问密钥
-// ====================
-$secret_key = "u7Xh29LmQpRa45ZtBnYvWc0JfKe8Gs1D";
-if (!isset($_GET['key']) || $_GET['key'] !== $secret_key) die("❌ 未授权访问");
-
-// ====================
-// 登录检查
-// ====================
-if (!isset($_SESSION['admin_id'])) {
-    header("Location: login.php?key=$secret_key");
-    exit;
-}
-
-require '../config.php';
+require __DIR__ . '/auth_admin.php';
+require __DIR__ . '/../config.php';
 date_default_timezone_set("Asia/Kuala_Lumpur");
 
-// ====================
-// 分类分组（与 shop.php 一致）
-// ====================
-// ====================
-// 分类分组（与 shop.php 一致）
-// ====================
-$categoryGroups  = [
-  'snacks' => [
-    'label' => '速食小吃',
-    'children' => [
-      'moyu'     => '魔芋爽',
-      'xieliu'   => '蟹柳',
-      'egg'      => '鹌鹑蛋',
-      'tofu'     => '鱼豆腐',
-      'latiao'   => '辣条',
-      'jinzhen'  => '金针菇',
-      'tudoupian'=> '土豆片',
-      'lianou'   => '莲藕片',
-      'moyu2'     => '魔芋',
-      'haidai'   => '海带',
-      'other'    => '其他'
-    ]
-  ],
+$stmt = $pdo->query(
+    "SELECT
+        g.group_key,
+        g.label AS group_label,
+        c.category_key,
+        c.name AS category_name
+     FROM category_groups g
+     JOIN product_categories c ON c.group_id = g.id
+     WHERE g.status = 1 AND c.status = 1
+     ORDER BY g.sort_order ASC, c.sort_order ASC"
+);
 
-  'meals' => [
-    'label' => '粉类/速食主食',
-    'children' => [
-      'noodle'   => '酸辣粉',
-      'luosifen' => '螺蛳粉',
-      'hotpot'   => '自热火锅'
-
-    ]
-  ],
-
-  'candy' => [
-    'label' => '糖果',
-    'children' => [
-      'qqcandy'  => 'QQ糖果',
-      'coffee'   => '咖啡糖',
-      'other1'    => '其他'
-    ]
-  ],
-
-  'chips' => [
-    'label' => '脆片坚果类',
-    'children' => [
-      'lays'  => 'Lays 薯片',
-      'other2' => '其他'   
-    ]
-  ],
-
-  'creative' => [
-    'label' => '文创小物',
-    'children' => [
-      'creative' => '文创小物'
-    ]
-  ]
-];
-
-// ⬇ 将所有子分类展平成 1 维数组（用于表单 select）
+$categoryGroups = [];
 $categories = [];
-foreach ($categoryGroups as $group) {
-    foreach ($group['children'] as $key => $label) {
-        $categories[$key] = $label;
+
+while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $groupKey = $row['group_key'];
+
+    if (!isset($categoryGroups[$groupKey])) {
+        $categoryGroups[$groupKey] = [
+            'label' => $row['group_label'],
+            'children' => []
+        ];
     }
+
+    $categoryGroups[$groupKey]['children'][$row['category_key']] = $row['category_name'];
+    $categories[$row['category_key']] = $row['category_name'];
 }
 
-$cat = $_GET['cat'] ?? array_key_first($categories);
+$selectedGroup = $_GET['group'] ?? '';
+$selectedCat = $_GET['cat'] ?? '';
+
+if ($selectedGroup !== '' && !isset($categoryGroups[$selectedGroup])) {
+    $selectedGroup = '';
+}
+
+if ($selectedCat !== '' && !isset($categories[$selectedCat])) {
+    $selectedCat = '';
+}
+
+$cat = $selectedCat;
 
 // ====================
 // 上传图片函数
@@ -99,10 +57,12 @@ function uploadImage($fileInput) {
         if ($_FILES[$fileInput]['size'] > 2*1024*1024) return null;
         $ext = strtolower(pathinfo($_FILES[$fileInput]['name'], PATHINFO_EXTENSION));
         $filename = uniqid().".".$ext;
-        $targetDir = __DIR__."/../uploads/";
+        $targetDir = __DIR__ . "/../frontend/uploads/";
         if (!is_dir($targetDir)) mkdir($targetDir,0777,true);
         $target = $targetDir.$filename;
-        if (move_uploaded_file($_FILES[$fileInput]['tmp_name'],$target)) return "uploads/".$filename;
+        if (move_uploaded_file($_FILES[$fileInput]['tmp_name'],$target)) {
+            return "frontend/uploads/" . $filename;
+        }
     }
     return null;
 }
@@ -131,7 +91,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['add_product'])) {
     // $stmt = $pdo->prepare("UPDATE products SET is_hot = ? WHERE id = ?");
     // $stmt->execute([$is_hot, $product_id]);
 
-    header("Location: products.php?key=$secret_key&cat=$category&msg=".urlencode("✅ 商品已添加")); exit;
+    header("Location: products.php?cat=" . urlencode($category) . "&msg=" . urlencode("✅ 商品已添加"));
+    exit;
 }
 
 // ====================
@@ -166,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id']) && !isset($_POS
         exit;
     }
 
-    header("Location: products.php?key=$secret_key&cat=$cat");
+    header("Location: products.php?cat=" . urlencode($cat));
     exit;
 }
 
@@ -241,7 +202,8 @@ if (isset($_GET['hot_move'], $_GET['id'])) {
 if (isset($_GET['delete'])) {
     $id=intval($_GET['delete']);
     $pdo->prepare("DELETE FROM products WHERE id=?")->execute([$id]);
-    header("Location: products.php?key=$secret_key&cat=$cat&msg=".urlencode("❌ 商品已删除")); exit;
+    header("Location: products.php?cat=" . urlencode($cat) . "&msg=" . urlencode("❌ 商品已删除"));
+    exit;
 }
 
 // ====================
@@ -283,26 +245,40 @@ if (isset($_GET['move'],$_GET['id'])) {
         }
     }
 
-    header("Location: products.php?key=$secret_key&cat=$cat"); 
+    header("Location: products.php?cat=" . urlencode($cat));
     exit;
 }
 
 // ====================
 // 重新整理排序（保证连续）
 // ====================
-$stmt = $pdo->prepare("SELECT id FROM products WHERE category=? ORDER BY sort_order ASC,id ASC");
-$stmt->execute([$cat]);
-$ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
-foreach ($ids as $i => $pid) {
-    $pdo->prepare("UPDATE products SET sort_order=? WHERE id=?")->execute([$i+1, $pid]);
+if ($selectedCat !== '') {
+    $stmt = $pdo->prepare("SELECT id FROM products WHERE category=? ORDER BY sort_order ASC,id ASC");
+    $stmt->execute([$selectedCat]);
+    $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    foreach ($ids as $i => $pid) {
+        $pdo->prepare("UPDATE products SET sort_order=? WHERE id=?")->execute([$i+1, $pid]);
+    }
 }
 
 // ====================
 // 查询商品
 // ====================
-$stmt=$pdo->prepare("SELECT * FROM products WHERE category=? ORDER BY sort_order ASC,id DESC");
-$stmt->execute([$cat]); 
-$products=$stmt->fetchAll(PDO::FETCH_ASSOC);
+if ($selectedCat !== '') {
+    $stmt = $pdo->prepare("SELECT * FROM products WHERE category=? ORDER BY sort_order ASC,id DESC");
+    $stmt->execute([$selectedCat]);
+} elseif ($selectedGroup !== '') {
+    $groupCats = array_keys($categoryGroups[$selectedGroup]['children']);
+    $placeholders = implode(',', array_fill(0, count($groupCats), '?'));
+
+    $stmt = $pdo->prepare("SELECT * FROM products WHERE category IN ($placeholders) ORDER BY category ASC, sort_order ASC,id DESC");
+    $stmt->execute($groupCats);
+} else {
+    $stmt = $pdo->query("SELECT * FROM products ORDER BY category ASC, sort_order ASC,id DESC");
+}
+
+$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $msg=$_GET['msg']??'';
 ?>
 <!DOCTYPE html>
@@ -311,77 +287,54 @@ $msg=$_GET['msg']??'';
 <meta charset="UTF-8">
 <title>商品管理</title>
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="stylesheet" href="/yummy-diary/backend/css/admin_layout.css">
 <style>
-body{font-family:"Segoe UI",Arial;margin:0;background:#fafafa;color:#333;}
-.sidebar{width:220px;background:#fff;border-right:2px solid #000;height:100vh;position:fixed;top:0;left:0;display:flex;flex-direction:column;}
-.sidebar h2{background:#000;color:#fff;padding:15px;text-align:center;margin:0;font-size:16px;}
-.sidebar a{display:block;padding:12px 20px;color:#000;text-decoration:none;border-bottom:1px solid #eee;}
-.sidebar a:hover{background:#eee;}
-.sidebar a.active{background:#000;color:#fff;}
-.logout{margin:15px;text-align:center;}
-.logout a{background:#000;color:#fff;padding:8px 12px;border-radius:6px;text-decoration:none;}
-.logout a:hover{background:#333;}
-main{margin-left:240px;padding:20px;}
-.category-nav{margin:10px 0;display:flex;flex-wrap:wrap;gap:6px;}
-.category-nav a{padding:6px 12px;border:1px solid #000;border-radius:4px;text-decoration:none;font-size:14px;}
-.category-nav a.active{background:#000;color:#fff;}
-.table-wrapper{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;margin-top:15px;min-width:720px;}
-th,td{border:1px solid #ccc;padding:10px;text-align:center;}
-tr:nth-child(even){background:#f9f9f9;}
-tr:hover{background:#f1f1f1;}
-.btn{padding:4px 8px;border-radius:4px;margin:2px;text-decoration:none;display:inline-block;font-size:13px;}
-.btn-edit{background:#2196F3;color:#fff;border:none;}
-.btn-edit:hover{background:#1976D2;}
-.btn-move{background:#eee;color:#333;border:1px solid #999;}
-.btn-move:hover{background:#ddd;}
-.btn-delete{background:#f44336;color:#fff;border:none;}
-.btn-delete:hover{background:#d32f2f;}
-.thumb{width:50px;height:50px;object-fit:cover;border-radius:4px;}
-.msg{padding:8px;margin:10px 0;background:#e8f5e9;color:#2e7d32;border-radius:6px;}
-@media(max-width:768px){
-  main{margin-left:0;padding:10px;}
-  .sidebar{position:relative;width:100%;height:auto;border-right:none;border-bottom:2px solid #000;flex-direction:row;overflow-x:auto;}
-  .sidebar h2{display:none;}
-  .sidebar a{flex:1 0 auto;border-bottom:none;border-right:1px solid #eee;font-size:13px;padding:10px;text-align:center;}
-  .logout{display:none;}
-  table th,table td{font-size:12px;padding:6px;white-space:nowrap;}
-  .btn{font-size:11px;padding:4px 6px;}
-}
+  .table-wrapper{overflow-x:auto;}
+  .product-form-card{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;}
+  .product-form-card .full{grid-column:1 / -1;}
 </style>
 </head>
 <body>
 
-<!-- ✅ 左侧导航 -->
-<div class="sidebar">
-  <h2>🍪 Yummy Diary</h2>
-  <a href="dashboard.php?key=<?= $secret_key ?>">📊 仪表盘</a>
-  <a href="products.php?key=<?= $secret_key ?>"class="active">🍪 商品管理</a>
-  <a href="inventory.php?key=<?= $secret_key ?>">📦 库存管理</a>
-  <a href="orders.php?key=<?= $secret_key ?>">🛒 订单管理</a>
-  <a href="hot_products.php?key=<?= $secret_key ?>">💡 热销管理</a>
-  <a href="promotions.php?key=<?= $secret_key ?>">💡 优惠管理</a>
-  <div class="logout"><a href="logout.php?key=<?= $secret_key ?>">退出登录</a></div>
-</div>
+<?php include __DIR__ . '/includes/sidebar.php'; ?>
 
 <main>
-  <h2>商品列表</h2>
+  <section class="page-header">
+    <div class="page-title">
+      <h2>商品管理</h2>
+      <p>管理店铺商品、价格、库存和热销状态</p>
+    </div>
+  </section>
 
-  <!-- ✅ 分类导航（带分组显示） -->
-  <div class="category-nav">
-    <?php foreach($categoryGroups as $group): ?>
-      <?php foreach($group['children'] as $key=>$label): ?>
-        <a href="?key=<?= $secret_key ?>&cat=<?= $key ?>" class="<?= $cat===$key?'active':'' ?>">
-          <?= $group['label'] ?> / <?= $label ?>
-        </a>
+  <form class="category-filter" method="get">
+    <select id="groupSelect" name="group">
+      <option value="">全部大分类</option>
+      <?php foreach ($categoryGroups as $groupKey => $group): ?>
+        <option value="<?= htmlspecialchars($groupKey) ?>" <?= (isset($_GET['group']) && $_GET['group'] === $groupKey) ? 'selected' : '' ?>>
+          <?= htmlspecialchars($group['label']) ?>
+        </option>
       <?php endforeach; ?>
-    <?php endforeach; ?>
-  </div>
+    </select>
+
+    <select id="catSelect" name="cat">
+      <option value="">全部小分类</option>
+      <?php foreach ($categoryGroups as $groupKey => $group): ?>
+        <?php foreach ($group['children'] as $key => $label): ?>
+          <option value="<?= htmlspecialchars($key) ?>" data-group="<?= htmlspecialchars($groupKey) ?>" <?= ($cat === $key) ? 'selected' : '' ?>>
+            <?= htmlspecialchars($group['label']) ?> / <?= htmlspecialchars($label) ?>
+          </option>
+        <?php endforeach; ?>
+      <?php endforeach; ?>
+    </select>
+
+    <button type="submit" class="btn btn-edit">筛选</button>
+    <a href="products.php" class="btn btn-move">重置</a>
+  </form>
 
   <?php if($msg): ?><div class="msg"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
 
   <!-- 添加商品 -->
-  <form method="post" enctype="multipart/form-data" style="margin:10px 0;">
+  <form class="admin-card product-form-card" method="post" enctype="multipart/form-data">
     <input type="hidden" name="add_product" value="1">
     <input type="text" name="sku" placeholder="SKU" required>
     <input type="text" name="name" placeholder="商品名" required>
@@ -403,7 +356,7 @@ tr:hover{background:#f1f1f1;}
       <tr>
         <td><?= $p['id'] ?></td>
         <td><?= htmlspecialchars($p['sku']) ?></td>
-        <td><?php if($p['image_url']): ?><img src="../<?= $p['image_url'] ?>" class="thumb"><?php endif; ?></td>
+        <td><?php if($p['image_url']): ?><img src="/yummy-diary/<?= htmlspecialchars($p['image_url']) ?>" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" class="thumb"><?php endif; ?></td>
         <td><?= htmlspecialchars($p['name']) ?></td>
         <td>RM <?= number_format($p['price'],2) ?></td>
         <td><?= $p['stock'] ?></td>
@@ -411,18 +364,18 @@ tr:hover{background:#f1f1f1;}
         <td>
 
           <!-- ✅ Edit 按钮 -->
-          <a href="edit_product.php?key=<?= $secret_key ?>&id=<?= $p['id'] ?>" 
+          <a href="edit_product.php?id=<?= $p['id'] ?>" 
              class="btn btn-edit">
              ✏️ 编辑
           </a>
 
-        <a href="products.php?key=<?= $secret_key ?>&cat=<?= $cat ?>&move=up&id=<?= $p['id'] ?>" 
+        <a href="products.php?cat=<?= urlencode($cat) ?>&move=up&id=<?= $p['id'] ?>" 
    class="btn btn-move">
    ⬆
 </a>
 
           <!-- 🔽 下移 -->
-          <a href="products.php?key=<?= $secret_key ?>&cat=<?= $cat ?>&move=down&id=<?= $p['id'] ?>" 
+          <a href="products.php?cat=<?= urlencode($cat) ?>&move=down&id=<?= $p['id'] ?>" 
    class="btn btn-move">
    ⬇
 </a>
@@ -440,7 +393,7 @@ tr:hover{background:#f1f1f1;}
           </form>
 
           <!-- ✅ 删除 -->
-          <a href="products.php?key=<?= $secret_key ?>&cat=<?= $cat ?>&delete=<?= $p['id'] ?>"
+          <a href="products.php?cat=<?= urlencode($cat) ?>&delete=<?= $p['id'] ?>"
              class="btn btn-delete"
              onclick="return confirm('确定删除？')">
              🗑 删除
@@ -452,5 +405,34 @@ tr:hover{background:#f1f1f1;}
     </table>
   </div>
 </main>
+<script>
+  (function () {
+    const groupSelect = document.getElementById('groupSelect');
+    const catSelect = document.getElementById('catSelect');
+
+    function syncCategoryOptions() {
+      const group = groupSelect.value;
+      const options = Array.from(catSelect.querySelectorAll('option'));
+      const hasGroup = !!group;
+
+      options.forEach(function (option) {
+        const match = !hasGroup || option.getAttribute('data-group') === group || option.value === '';
+        option.hidden = !match;
+        option.disabled = !match;
+      });
+
+      if (group) {
+        catSelect.value = '';
+      }
+    }
+
+    if (groupSelect && catSelect) {
+      groupSelect.addEventListener('change', function () {
+        syncCategoryOptions();
+      });
+      syncCategoryOptions();
+    }
+  })();
+</script>
 </body>
 </html>

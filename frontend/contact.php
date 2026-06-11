@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Contact - Yummy Diary</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/yummy-diary/css/style.css">
   <style>
     .contact-wrapper {
       display: flex;
@@ -111,12 +111,12 @@
 </head>
 <body>
 
-  <?php include 'header.php'; ?>
+  <?php include __DIR__ . '/hardware/header.php'; ?>
 
   <section class="contact-wrapper">
     <!-- 左边猫咪插图 -->
     <div class="contact-left">
-      <img src="images/43" alt="Cat Contact">
+      <img src="/yummy-diary/images/43" alt="Cat Contact">
     </div>
 
     <!-- 右边联系方式 -->
@@ -135,7 +135,7 @@
     </div>
   </section>
 
-  <?php include 'footer.php'; ?>
+  <?php include __DIR__ . '/hardware/footer.php'; ?>
 
 </body>
 </html>
