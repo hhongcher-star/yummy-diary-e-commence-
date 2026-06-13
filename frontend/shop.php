@@ -748,6 +748,19 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
     const addButton = document.getElementById("variantAdd");
     let products = [], selected = null, flavor = "", qty = 1;
 
+    function storefrontImageUrl(value) {
+      let path = String(value || "").replaceAll("\\", "/").trim();
+      path = path.replace(/^https?:\/\/[^/]+/i, "");
+      path = path.replace(/^\/?yummy-diary\//i, "");
+      path = path.replace(/^\/+/, "");
+
+      if (path.startsWith("uploads/")) {
+        path = "frontend/" + path;
+      }
+
+      return "/" + (path || "images/soldout.png");
+    }
+
     function parse(button) {
       if (button.dataset.productType === "grouped") {
         let variants = [];
@@ -786,7 +799,12 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
       document.getElementById("variantSku").textContent = "编号：" + sku;
       document.getElementById("variantStock").textContent = "库存：" + stock;
       document.getElementById("variantPrice").textContent = "RM " + price.toFixed(2);
-      document.getElementById("variantImage").src = "/yummy-diary/" + imageUrl;
+      const variantImage = document.getElementById("variantImage");
+      variantImage.onerror = () => {
+        variantImage.onerror = null;
+        variantImage.src = "/images/soldout.png";
+      };
+      variantImage.src = storefrontImageUrl(imageUrl);
       addButton.disabled = available <= 0;
       addButton.textContent = available > 0 ? `加入购物袋 · RM ${(price * qty).toFixed(2)}` : "已达到库存上限";
     }
