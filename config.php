@@ -28,12 +28,11 @@ ini_set('display_startup_errors', $appEnvironment === 'development' ? '1' : '0')
 ini_set('log_errors', '1');
 error_reporting(E_ALL);
 
-$host = getenv('DB_HOST') ?: '127.0.0.1';
-$port = getenv('DB_PORT') ?: '3306';
-$database = getenv('DB_NAME') ?: 'u751690829_yummy_diary';
-$username = getenv('DB_USER') ?: 'root';
-$password = getenv('DB_PASSWORD') ?: '';
-
+$host = 'localhost';
+$port = '3306';
+$database = 'u751690829_yummy';
+$username = 'u751690829_yummy';
+$password = 'Hong63@511';
 $dsn = sprintf(
     'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
     $host,
