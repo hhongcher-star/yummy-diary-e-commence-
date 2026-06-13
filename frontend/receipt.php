@@ -61,9 +61,7 @@ $grand_total = (float)$order_data['grand_total'];
 $gifts = [];
 $shipping_msg = "";
 
-if (abs($shipping_cost - 10.00) < 0.01) {
-    $shipping_msg = "🚚 西马运费：RM10.00";
-} elseif (abs($shipping_cost - 15.90) < 0.01) {
+if (abs($shipping_cost - 15.90) < 0.01) {
     $shipping_msg = "🚚 东马普通运费：RM15.90";
 } elseif (abs($shipping_cost - 13.90) < 0.01) {
     $shipping_msg = "🚚 东马满 RM19.90：运费 RM13.90";
@@ -76,13 +74,25 @@ if (abs($shipping_cost - 10.00) < 0.01) {
 } elseif (abs($shipping_cost - 9.90) < 0.01) {
     $shipping_msg = "🚚 东马满 RM49.90：运费 RM9.90<br>🎁 赠品：1包魔芋爽 + 小挂件";
     $gifts = ["魔芋爽", "小挂件"];
+} elseif (abs($shipping_cost - 7.50) < 0.01) {
+    $shipping_msg = "🚚 西马普通运费：RM7.50";
+} elseif (abs($shipping_cost - 5.90) < 0.01) {
+    $shipping_msg = "🚚 西马满 RM19.90：运费 RM5.90";
+} elseif (abs($shipping_cost - 3.50) < 0.01) {
+    $shipping_msg = "🚚 西马满 RM29.90：运费 RM3.50<br>🎁 赠品：1包魔芋爽 + 小挂件";
+    $gifts = ["魔芋爽", "小挂件"];
+} elseif (abs($shipping_cost - 1.90) < 0.01) {
+    $shipping_msg = "🚚 西马满 RM39.90：运费 RM1.90<br>🎁 赠品：1包魔芋爽 + 小挂件";
+    $gifts = ["魔芋爽", "小挂件"];
+} elseif (abs($shipping_cost - 0.00) < 0.01) {
+    $shipping_msg = "🚚 西马满 RM49.90：免运<br>🎁 赠品：1包魔芋爽 + 小挂件";
+    $gifts = ["魔芋爽", "小挂件"];
 } else {
     $shipping_msg = "🚚 运费：RM" . number_format($shipping_cost, 2);
 }
 ?>
 
 <!DOCTYPE html>
-
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
@@ -279,120 +289,113 @@ th{
   }
 }
 </style>
-
 </head>
 
 <body>
-  <div class="header">
-    <a href="shop.php" class="back-btn">
-      <i class="fas fa-arrow-left"></i> 返回菜单
-    </a>
 
-```
-<img src="/yummy-diary/images/猫_购物袋.jpg" alt="Yummy Diary">
-<h2>🧾 Yummy Diary · 订单收据</h2>
-```
-
-  </div>
-
-  <div class="container" id="receipt">
-    <p><strong>订单号:</strong> <?= htmlspecialchars($order_data['id']) ?></p>
-    <p><strong>下单时间:</strong> <?= htmlspecialchars($timeFormatted) ?></p>
-
-```
-<table>
-  <tr>
-    <th>数量</th>
-    <th>商品</th>
-    <th>单价 (RM)</th>
-    <th>小计 (RM)</th>
-  </tr>
-
-  <?php foreach ($order_data['items'] as $item): ?>
-    <?php
-      $subtotal = $item['price'] * $item['qty'];
-      $skuLabel = $item['sku'] ? "[" . htmlspecialchars($item['sku']) . "] " : "";
-    ?>
-    <tr>
-      <td><?= (int)$item['qty'] ?></td>
-      <td><?= $skuLabel . htmlspecialchars($item['name']) ?></td>
-      <td><?= number_format($item['price'], 2) ?></td>
-      <td><?= number_format($subtotal, 2) ?></td>
-    </tr>
-  <?php endforeach; ?>
-
-  <?php foreach ($gifts as $gift): ?>
-    <tr>
-      <td>1</td>
-      <td>[赠] <?= htmlspecialchars($gift) ?></td>
-      <td>0.00</td>
-      <td>0.00</td>
-    </tr>
-  <?php endforeach; ?>
-
-  <tr>
-    <td colspan="3" style="text-align:right;">运费</td>
-    <td><?= number_format($shipping_cost, 2) ?></td>
-  </tr>
-</table>
-
-<p class="total">商品总额: RM <?= number_format($total, 2) ?></p>
-<p class="total">运费: RM <?= number_format($shipping_cost, 2) ?></p>
-<p class="total">总价 (含运费): RM <?= number_format($grand_total, 2) ?></p>
-
-<div class="shipping">
-  <?= $shipping_msg ?>
-</div>
-
-<div class="footer">
-  <h3>💳 付款提示</h3>
-  <p>请联系商家获取付款方式。</p>
-
-  <h3>📩 联系方式</h3>
-  <p>
-    <a href="https://www.instagram.com/yummydiaryy_" target="_blank" style="color:#333;text-decoration:none;">
-      <i class="fab fa-instagram contact-icon"></i>@yummydiaryy_
-    </a>
-    <br>
-    <a href="https://wa.me/60106654042" target="_blank" style="color:#333;text-decoration:none;">
-      <i class="fab fa-whatsapp contact-icon"></i> +60 10 665 4042
-    </a>
-  </p>
-</div>
-
-<div class="btn-row">
-  <a href="index.php" class="btn-short">
-    <i class="fas fa-check"></i> <strong>完成</strong>
+<div class="header">
+  <a href="shop.php" class="back-btn">
+    <i class="fas fa-arrow-left"></i> 返回菜单
   </a>
 
-  <button id="downloadPdf" class="btn-short">
-    <i class="fas fa-file-pdf"></i> PDF
-  </button>
+  <img src="/yummy-diary/images/猫_购物袋.jpg" alt="Yummy Diary">
+  <h2>🧾 Yummy Diary · 订单收据</h2>
 </div>
-```
 
+<div class="container" id="receipt">
+  <p><strong>订单号:</strong> <?= htmlspecialchars($order_data['id']) ?></p>
+  <p><strong>下单时间:</strong> <?= htmlspecialchars($timeFormatted) ?></p>
+
+  <table>
+    <tr>
+      <th>数量</th>
+      <th>商品</th>
+      <th>单价 (RM)</th>
+      <th>小计 (RM)</th>
+    </tr>
+
+    <?php foreach ($order_data['items'] as $item): ?>
+      <?php
+        $subtotal = $item['price'] * $item['qty'];
+        $skuLabel = $item['sku'] ? "[" . htmlspecialchars($item['sku']) . "] " : "";
+      ?>
+      <tr>
+        <td><?= (int)$item['qty'] ?></td>
+        <td><?= $skuLabel . htmlspecialchars($item['name']) ?></td>
+        <td><?= number_format($item['price'], 2) ?></td>
+        <td><?= number_format($subtotal, 2) ?></td>
+      </tr>
+    <?php endforeach; ?>
+
+    <?php foreach ($gifts as $gift): ?>
+      <tr>
+        <td>1</td>
+        <td>[赠] <?= htmlspecialchars($gift) ?></td>
+        <td>0.00</td>
+        <td>0.00</td>
+      </tr>
+    <?php endforeach; ?>
+
+    <tr>
+      <td colspan="3" style="text-align:right;">运费</td>
+      <td><?= number_format($shipping_cost, 2) ?></td>
+    </tr>
+  </table>
+
+  <p class="total">商品总额: RM <?= number_format($total, 2) ?></p>
+  <p class="total">运费: RM <?= number_format($shipping_cost, 2) ?></p>
+  <p class="total">总价: RM <?= number_format($grand_total, 2) ?></p>
+
+  <div class="shipping">
+    <?= $shipping_msg ?>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <div class="footer">
+    <h3>💳 付款提示</h3>
+    <p>请联系商家获取付款方式。</p>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <h3>📩 联系方式</h3>
+    <p>
+      <a href="https://www.instagram.com/yummydiaryy_" target="_blank" style="color:#333;text-decoration:none;">
+        <i class="fab fa-instagram contact-icon"></i>@yummydiaryy_
+      </a>
+      <br>
+      <a href="https://wa.me/60106654042" target="_blank" style="color:#333;text-decoration:none;">
+        <i class="fab fa-whatsapp contact-icon"></i> +60 10 665 4042
+      </a>
+    </p>
+  </div>
 
-  <script>
-  document.getElementById("downloadPdf").addEventListener("click", () => {
-    const { jsPDF } = window.jspdf;
-    const receipt = document.getElementById("receipt");
+  <div class="btn-row">
+    <a href="index.php" class="btn-short">
+      <i class="fas fa-check"></i> <strong>完成</strong>
+    </a>
 
-    html2canvas(receipt, { scale: 2 }).then(canvas => {
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = 210;
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    <button id="downloadPdf" class="btn-short">
+      <i class="fas fa-file-pdf"></i> PDF
+    </button>
+  </div>
+</div>
 
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save("YummyDiary-Receipt.pdf");
-    });
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+document.getElementById("downloadPdf").addEventListener("click", () => {
+  const { jsPDF } = window.jspdf;
+  const receipt = document.getElementById("receipt");
+
+  html2canvas(receipt, { scale: 2 }).then(canvas => {
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pdfWidth = 210;
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save("YummyDiary-Receipt.pdf");
   });
-  </script>
+});
+</script>
 
 </body>
 </html>

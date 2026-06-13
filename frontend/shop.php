@@ -237,8 +237,13 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
     .product-card button:disabled { border-color:#aaa; color:#aaa; cursor:not-allowed; background:#f1f1f1; }
     .variant-modal{position:fixed;inset:0;z-index:2600;display:none;background:rgba(28,24,22,.38);backdrop-filter:blur(3px);}
     .variant-modal.show{display:block;}
-    .variant-panel{position:absolute;right:0;top:0;width:min(430px,92vw);height:100%;background:#fff;padding:24px;box-sizing:border-box;overflow-y:auto;box-shadow:-18px 0 55px rgba(45,35,30,.18);animation:variantSlide .24s ease;}
+    .variant-panel{position:absolute;right:0;top:0;width:min(430px,92vw);height:100%;background:#fff;padding:72px 24px 24px;box-sizing:border-box;overflow-y:auto;box-shadow:-18px 0 55px rgba(45,35,30,.18);animation:variantSlide .24s ease;}
     @keyframes variantSlide{from{transform:translateX(100%)}to{transform:translateX(0)}}
+    .variant-decoration{position:absolute;top:0;left:50%;width:120px;height:120px;object-fit:contain;pointer-events:none;transform-origin:center bottom;animation:variantBreathe 2.2s ease-in-out infinite;}
+    @keyframes variantBreathe{
+      0%,100%{transform:translateX(-50%) translateY(0) scale(1);}
+      50%{transform:translateX(-50%) translateY(-7px) scale(1.06);}
+    }
     .variant-close{position:absolute;right:18px;top:15px;border:0;width:38px;height:38px;border-radius:50%;background:#f7f3ef;font-size:22px;cursor:pointer;}
     .variant-product{display:grid;grid-template-columns:86px 1fr;gap:15px;align-items:center;padding:22px 0 18px;border-bottom:1px solid #eee;}
     .variant-product img{width:86px;height:86px;object-fit:cover;border-radius:15px;border:1px solid #eee;}
@@ -271,7 +276,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
     .sort-save-state.dirty{color:#b36b00;}
     .sort-save-state.success{color:#267a43;}
 @media (max-width: 768px) {
-  .variant-panel{top:auto;bottom:0;width:100%;height:auto;max-height:88vh;border-radius:24px 24px 0 0;animation:variantRise .24s ease;}
+  .variant-panel{top:auto;bottom:0;width:100%;height:auto;max-height:88vh;padding-top:58px;border-radius:24px 24px 0 0;overflow:visible;animation:variantRise .24s ease;}
+  .variant-decoration{top:-78px;width:150px;height:150px;}
   @keyframes variantRise{from{transform:translateY(100%)}to{transform:translateY(0)}}
   .shop-layout {
     grid-template-columns: 120px 1fr;
@@ -332,6 +338,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
     font-size: 14px;
     margin-right: 0;
   }
+}
+@media (prefers-reduced-motion: reduce) {
+  .variant-decoration{animation:none;transform:translateX(-50%);}
 }
 
   </style>
@@ -700,6 +709,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
   </script>
   <div id="variantModal" class="variant-modal" aria-hidden="true">
     <section class="variant-panel" role="dialog" aria-modal="true" aria-labelledby="variantTitle">
+      <img class="variant-decoration" src="/yummy-diary/images/yummy.png" alt="" aria-hidden="true">
       <button type="button" class="variant-close" aria-label="关闭">×</button>
       <div class="variant-product">
         <img id="variantImage" src="" alt="">
@@ -833,7 +843,10 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
           window.cartData = result;
         }
         updateCartUI(window.cartData);
-        close();
+        qty = 1;
+        details();
+        addButton.textContent = "已加入购物袋 ✓";
+        window.setTimeout(details, 700);
       } catch (error) {
         alert(error.message);
         details();

@@ -3,6 +3,16 @@ require __DIR__ . '/auth_admin.php';
 require __DIR__ . '/../config.php';
 date_default_timezone_set("Asia/Kuala_Lumpur");
 
+$csrfToken = $_SESSION['admin_csrf_token'] ??= bin2hex(random_bytes(32));
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $submittedToken = (string)($_POST['csrf_token'] ?? '');
+    if (!hash_equals($csrfToken, $submittedToken)) {
+        http_response_code(403);
+        exit('Invalid CSRF token');
+    }
+}
+
 $stmt = $pdo->query(
     "SELECT
         g.group_key,
@@ -223,13 +233,19 @@ $categoriesForSort = $categorySortStmt->fetchAll(PDO::FETCH_ASSOC);
 // ====================
 function uploadImage($fileInput) {
     if (isset($_FILES[$fileInput]) && $_FILES[$fileInput]['error'] === UPLOAD_ERR_OK) {
-        $allowed = ['image/jpeg','image/png','image/gif'];
-        if (!in_array($_FILES[$fileInput]['type'], $allowed)) return null;
         if ($_FILES[$fileInput]['size'] > 2*1024*1024) return null;
-        $ext = strtolower(pathinfo($_FILES[$fileInput]['name'], PATHINFO_EXTENSION));
-        $filename = uniqid().".".$ext;
+        $allowed = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+        ];
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file($_FILES[$fileInput]['tmp_name']);
+        if (!isset($allowed[$mime])) return null;
+        $filename = bin2hex(random_bytes(16)) . "." . $allowed[$mime];
         $targetDir = __DIR__ . "/../frontend/uploads/";
-        if (!is_dir($targetDir)) mkdir($targetDir,0777,true);
+        if (!is_dir($targetDir)) mkdir($targetDir,0755,true);
         $target = $targetDir.$filename;
         if (move_uploaded_file($_FILES[$fileInput]['tmp_name'],$target)) {
             return "frontend/uploads/" . $filename;
@@ -280,11 +296,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id']) && !isset($_POS
 // ====================
 // 🔥 热销排序
 // ====================
-if (isset($_GET['hot_move'], $_GET['id'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hot_move'], $_POST['id'])) {
   header('Content-Type: application/json');
 
-    $id = intval($_GET['id']);
-    $move = $_GET['hot_move'];
+    $id = intval($_POST['id']);
+    $move = $_POST['hot_move'];
 
     $stmt = $pdo->prepare("SELECT * FROM products WHERE id=? AND is_hot=1");
     $stmt->execute([$id]);
@@ -345,8 +361,8 @@ if (isset($_GET['hot_move'], $_GET['id'])) {
 // ====================
 // 删除商品
 // ====================
-if (isset($_GET['delete'])) {
-    $id=intval($_GET['delete']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_product'])) {
+    $id=intval($_POST['delete_product']);
     $pdo->prepare("DELETE FROM products WHERE id=?")->execute([$id]);
     header("Location: products.php?cat=" . urlencode($cat) . "&msg=" . urlencode("❌ 商品已删除"));
     exit;
@@ -355,9 +371,9 @@ if (isset($_GET['delete'])) {
 // ====================
 // 上下移动排序
 // ====================
-if (isset($_GET['move'],$_GET['id'])) {
-    $id=intval($_GET['id']); 
-    $move=$_GET['move'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move'],$_POST['id'])) {
+    $id=intval($_POST['id']);
+    $move=$_POST['move'];
 
     $stmt=$pdo->prepare("SELECT * FROM products WHERE id=?");
     $stmt->execute([$id]); 
@@ -536,6 +552,7 @@ $openSort = $_GET['open_sort'] ?? '';
 
       <div class="category-manage-grid">
         <form class="category-mini-form" method="post">
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
           <h4>新增大分类</h4>
           <input type="text" name="group_key" placeholder="例如: drinks" required>
           <input type="text" name="group_label" placeholder="例如: 饮料" required>
@@ -543,6 +560,7 @@ $openSort = $_GET['open_sort'] ?? '';
         </form>
 
         <form class="category-mini-form" method="post">
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
           <h4>新增小分类</h4>
           <label>选择大分类</label>
           <select name="group_id" required>
@@ -570,6 +588,7 @@ $openSort = $_GET['open_sort'] ?? '';
                     <small> ID: <?= (int)$group['id'] ?></small>
                   </div>
                   <form method="post" onsubmit="return confirm('确定删除这个大分类吗？');">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                     <input type="hidden" name="group_id" value="<?= (int)$group['id'] ?>">
                     <button type="submit" name="delete_group" value="1" class="btn btn-delete">删除大分类</button>
                   </form>
@@ -588,6 +607,7 @@ $openSort = $_GET['open_sort'] ?? '';
                     <small> <?= htmlspecialchars($item['category_key']) ?></small>
                   </div>
                   <form method="post" onsubmit="return confirm('确定删除这个小分类吗？');">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                     <input type="hidden" name="category_key" value="<?= htmlspecialchars($item['category_key']) ?>">
                     <button type="submit" name="delete_category" value="1" class="btn btn-delete">删除小分类</button>
                   </form>
@@ -623,11 +643,13 @@ $openSort = $_GET['open_sort'] ?? '';
                 </div>
                 <div class="sort-controls">
                   <form method="post">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                     <input type="hidden" name="group_id" value="<?= (int)$group['id'] ?>">
                     <input type="hidden" name="direction" value="up">
                     <button type="submit" name="move_group" value="1" class="btn btn-move" <?= $index === 0 ? 'disabled' : '' ?>>↑</button>
                   </form>
                   <form method="post">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                     <input type="hidden" name="group_id" value="<?= (int)$group['id'] ?>">
                     <input type="hidden" name="direction" value="down">
                     <button type="submit" name="move_group" value="1" class="btn btn-move" <?= $index === count($groupsForForm) - 1 ? 'disabled' : '' ?>>↓</button>
@@ -659,11 +681,13 @@ $openSort = $_GET['open_sort'] ?? '';
                     </div>
                     <div class="sort-controls">
                       <form method="post">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                         <input type="hidden" name="category_id" value="<?= (int)$item['id'] ?>">
                         <input type="hidden" name="direction" value="up">
                         <button type="submit" name="move_category" value="1" class="btn btn-move" <?= $index === 0 ? 'disabled' : '' ?>>↑</button>
                       </form>
                       <form method="post">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                         <input type="hidden" name="category_id" value="<?= (int)$item['id'] ?>">
                         <input type="hidden" name="direction" value="down">
                         <button type="submit" name="move_category" value="1" class="btn btn-move" <?= $index === count($groupCategories) - 1 ? 'disabled' : '' ?>>↓</button>
@@ -709,6 +733,7 @@ $openSort = $_GET['open_sort'] ?? '';
 
           <!-- ✅ 热销 -->
           <form method="post" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
             
             <label>
@@ -720,11 +745,12 @@ $openSort = $_GET['open_sort'] ?? '';
           </form>
 
           <!-- ✅ 删除 -->
-          <a href="products.php?cat=<?= urlencode($cat) ?>&delete=<?= $p['id'] ?>"
-             class="btn btn-delete"
-             onclick="return confirm('确定删除？')">
-             🗑 删除
-          </a>
+          <form method="post" style="display:inline;" onsubmit="return confirm('确定删除？')">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+            <button type="submit" name="delete_product" value="<?= (int)$p['id'] ?>" class="btn btn-delete">
+              🗑 删除
+            </button>
+          </form>
 
         </td>
       </tr>
