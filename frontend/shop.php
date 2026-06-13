@@ -83,11 +83,15 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
             $variantFamily = trim((string)($variantParts[0] ?? $p['name']));
             $variantFamily = preg_replace('/\s+(单包|盒装\s*\d+\s*包|无盒\s*\d+\s*包|\d+\s*包|整盒|盒装)$/u', '', $variantFamily);
             $productType = $p['product_type'] ?? 'single';
+            $productVariants = $variantsByProduct[(int)$p['id']] ?? [];
+            $displayStock = $productType === 'grouped'
+              ? array_sum(array_map(fn($variant) => max(0, (int)$variant['stock']), $productVariants))
+              : max(0, (int)$p['stock']);
             $hideVariantCard = false;
           ?>
           <div class="product-card" data-product-id="<?= (int)$p['id'] ?>" data-variant-family="<?= htmlspecialchars($variantFamily, ENT_QUOTES) ?>" <?= $hideVariantCard ? 'hidden' : '' ?> <?= $sortAdmin ? 'draggable="true"' : '' ?>>
             <div class="product-info">
-              <?php if ($p['stock'] <= 0): ?>
+              <?php if ($displayStock <= 0): ?>
                 <div class="soldout-tag">SOLD OUT</div>
               <?php endif; ?>
               <img src="/yummy-diary/<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
@@ -104,16 +108,16 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
                 <label>排序 <input type="number" class="sort-position-input" min="1" value="1"></label>
                 <button type="button" class="sort-drag-handle" title="按住拖动">↕</button>
               </div>
-            <?php elseif ($p['stock'] > 0): ?>
+            <?php elseif ($displayStock > 0): ?>
               <button class="add-to-cart"
                       data-id="<?= (int)$p['id'] ?>"
                       data-sku="<?= htmlspecialchars($p['sku'], ENT_QUOTES) ?>"
                       data-name="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>"
                       data-price="<?= htmlspecialchars($p['price'], ENT_QUOTES) ?>"
                       data-img="<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>"
-                      data-stock="<?= (int)$p['stock'] ?>"
+                      data-stock="<?= $displayStock ?>"
                       data-product-type="<?= htmlspecialchars($p['product_type'] ?? 'single', ENT_QUOTES) ?>"
-                      data-variants="<?= htmlspecialchars(json_encode($variantsByProduct[(int)$p['id']] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES) ?>">+</button>
+                      data-variants="<?= htmlspecialchars(json_encode($productVariants, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES) ?>">+</button>
             <?php else: ?>
               <button disabled>售罄</button>
             <?php endif; ?>
@@ -434,11 +438,15 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
                   $variantFamily = trim((string)($variantParts[0] ?? $p['name']));
                   $variantFamily = preg_replace('/\s+(单包|盒装\s*\d+\s*包|无盒\s*\d+\s*包|\d+\s*包|整盒|盒装)$/u', '', $variantFamily);
                   $productType = $p['product_type'] ?? 'single';
+                  $productVariants = $variantsByProduct[(int)$p['id']] ?? [];
+                  $displayStock = $productType === 'grouped'
+                    ? array_sum(array_map(fn($variant) => max(0, (int)$variant['stock']), $productVariants))
+                    : max(0, (int)$p['stock']);
                   $hideVariantCard = false;
                 ?>
                 <div class="product-card" data-product-id="<?= (int)$p['id'] ?>" data-variant-family="<?= htmlspecialchars($variantFamily, ENT_QUOTES) ?>" <?= $hideVariantCard ? 'hidden' : '' ?> <?= $sortAdmin ? 'draggable="true"' : '' ?>>
                   <div class="product-info">
-                    <?php if ($p['stock'] <= 0): ?>
+                    <?php if ($displayStock <= 0): ?>
                       <div class="soldout-tag">SOLD OUT</div>
                     <?php endif; ?>
                     <img src="/yummy-diary/<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
@@ -457,16 +465,16 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
                       <label>排序 <input type="number" class="sort-position-input" min="1" value="<?= $p['hot_order'] ?? $p['sort_order'] ?? 1 ?>"></label>
                       <button type="button" class="sort-drag-handle" title="按住拖动">↕</button>
                     </div>
-                  <?php elseif ($p['stock'] > 0): ?>
+                  <?php elseif ($displayStock > 0): ?>
                     <button class="add-to-cart"
                             data-id="<?= (int)$p['id'] ?>"
                             data-sku="<?= htmlspecialchars($p['sku'], ENT_QUOTES) ?>"
                             data-name="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>"
                             data-price="<?= htmlspecialchars($p['price'], ENT_QUOTES) ?>"
                             data-img="<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>"
-                            data-stock="<?= (int)$p['stock'] ?>"
+                            data-stock="<?= $displayStock ?>"
                             data-product-type="<?= htmlspecialchars($p['product_type'] ?? 'single', ENT_QUOTES) ?>"
-                            data-variants="<?= htmlspecialchars(json_encode($variantsByProduct[(int)$p['id']] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES) ?>">+
+                            data-variants="<?= htmlspecialchars(json_encode($productVariants, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES) ?>">+
                     </button>
                   <?php else: ?>
                     <button disabled>售罄</button>

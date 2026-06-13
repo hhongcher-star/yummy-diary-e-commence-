@@ -17997,35 +17997,51 @@ CREATE TABLE IF NOT EXISTS `product_categories` (
 INSERT IGNORE INTO `category_groups`
   (`group_key`, `label`, `sort_order`, `status`)
 VALUES
-  ('snacks', '零食分类', 1, 1);
+  ('snacks', '速食小吃', 1, 1),
+  ('meals', '粉类/速食主食', 2, 1),
+  ('candy', '糖果', 3, 1),
+  ('chips', '脆片坚果类', 4, 1),
+  ('creative', '文创小物', 5, 1);
 
 SET @yummy_snacks_group_id = (
   SELECT `id` FROM `category_groups` WHERE `group_key` = 'snacks' LIMIT 1
+);
+SET @yummy_meals_group_id = (
+  SELECT `id` FROM `category_groups` WHERE `group_key` = 'meals' LIMIT 1
+);
+SET @yummy_candy_group_id = (
+  SELECT `id` FROM `category_groups` WHERE `group_key` = 'candy' LIMIT 1
+);
+SET @yummy_chips_group_id = (
+  SELECT `id` FROM `category_groups` WHERE `group_key` = 'chips' LIMIT 1
+);
+SET @yummy_creative_group_id = (
+  SELECT `id` FROM `category_groups` WHERE `group_key` = 'creative' LIMIT 1
 );
 
 INSERT IGNORE INTO `product_categories`
   (`group_id`, `category_key`, `name`, `sort_order`, `status`)
 VALUES
   (@yummy_snacks_group_id, 'moyu', '魔芋爽', 1, 1),
-  (@yummy_snacks_group_id, 'moyu2', '魔芋制品', 2, 1),
-  (@yummy_snacks_group_id, 'latiao', '辣条', 3, 1),
-  (@yummy_snacks_group_id, 'haidai', '海带', 4, 1),
-  (@yummy_snacks_group_id, 'jinzhen', '金针菇', 5, 1),
-  (@yummy_snacks_group_id, 'lianou', '莲藕', 6, 1),
+  (@yummy_snacks_group_id, 'xieliu', '蟹柳', 2, 1),
+  (@yummy_snacks_group_id, 'egg', '鹌鹑蛋', 3, 1),
+  (@yummy_snacks_group_id, 'tofu', '鱼豆腐', 4, 1),
+  (@yummy_snacks_group_id, 'latiao', '辣条', 5, 1),
+  (@yummy_snacks_group_id, 'jinzhen', '金针菇', 6, 1),
   (@yummy_snacks_group_id, 'tudoupian', '土豆片', 7, 1),
-  (@yummy_snacks_group_id, 'tofu', '豆制品', 8, 1),
-  (@yummy_snacks_group_id, 'egg', '蛋类零食', 9, 1),
-  (@yummy_snacks_group_id, 'xieliu', '蟹柳', 10, 1),
-  (@yummy_snacks_group_id, 'qqcandy', 'QQ糖', 11, 1),
-  (@yummy_snacks_group_id, 'lays', '薯片', 12, 1),
-  (@yummy_snacks_group_id, 'coffee', '咖啡', 13, 1),
-  (@yummy_snacks_group_id, 'noodle', '面食', 14, 1),
-  (@yummy_snacks_group_id, 'luosifen', '螺蛳粉', 15, 1),
-  (@yummy_snacks_group_id, 'hotpot', '自热火锅', 16, 1),
-  (@yummy_snacks_group_id, 'creative', '创意零食', 17, 1),
-  (@yummy_snacks_group_id, 'other', '其他', 18, 1),
-  (@yummy_snacks_group_id, 'other1', '其他分类一', 19, 1),
-  (@yummy_snacks_group_id, 'other2', '其他分类二', 20, 1);
+  (@yummy_snacks_group_id, 'lianou', '莲藕片', 8, 1),
+  (@yummy_snacks_group_id, 'moyu2', '魔芋', 9, 1),
+  (@yummy_snacks_group_id, 'haidai', '海带', 10, 1),
+  (@yummy_snacks_group_id, 'other', '其他', 11, 1),
+  (@yummy_meals_group_id, 'noodle', '酸辣粉', 1, 1),
+  (@yummy_meals_group_id, 'luosifen', '螺蛳粉', 2, 1),
+  (@yummy_meals_group_id, 'hotpot', '自热火锅', 3, 1),
+  (@yummy_candy_group_id, 'qqcandy', 'QQ糖果', 1, 1),
+  (@yummy_candy_group_id, 'coffee', '咖啡糖', 2, 1),
+  (@yummy_candy_group_id, 'other1', '其他', 3, 1),
+  (@yummy_chips_group_id, 'lays', 'Lays 薯片', 1, 1),
+  (@yummy_chips_group_id, 'other2', '其他', 2, 1),
+  (@yummy_creative_group_id, 'creative', '文创小物', 1, 1);
 
 CREATE TABLE IF NOT EXISTS `product_variants` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
