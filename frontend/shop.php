@@ -516,7 +516,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
           document.getElementById("category-title").textContent = link.textContent;
 
           // AJAX 拉商品
-          fetch(`shop.php?cat=${cat}&ajax=1<?= $sortAdmin ? '&sort_admin=1' : '' ?>`)
+          fetch(`/shop?cat=${encodeURIComponent(cat)}&ajax=1<?= $sortAdmin ? '&sort_admin=1' : '' ?>`)
             .then(res => res.text())
             .then(html => {
               document.querySelector(".shop-content").innerHTML = html;
