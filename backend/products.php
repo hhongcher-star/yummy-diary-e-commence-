@@ -1,6 +1,4 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 require __DIR__ . '/auth_admin.php';
 require __DIR__ . '/../config.php';
 date_default_timezone_set("Asia/Kuala_Lumpur");
@@ -48,6 +46,179 @@ if ($selectedCat !== '' && !isset($categories[$selectedCat])) {
 $cat = $selectedCat;
 
 // ====================
+// 新增大分类
+// ====================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_group'])) {
+    $group_key = strtolower(trim($_POST['group_key']));
+    $label = trim($_POST['group_label']);
+
+    $group_key = preg_replace('/[^a-z0-9_]/', '', $group_key);
+
+    if ($group_key !== '' && $label !== '') {
+        $stmt = $pdo->query("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM category_groups");
+        $sort_order = $stmt->fetchColumn();
+
+        $stmt = $pdo->prepare("INSERT INTO category_groups (group_key, label, sort_order, status) VALUES (?, ?, ?, 1)");
+        $stmt->execute([$group_key, $label, $sort_order]);
+
+        header("Location: products.php?msg=" . urlencode("✅ 大分类已添加"));
+        exit;
+    }
+}
+
+// ====================
+// 新增小分类
+// ====================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_category'])) {
+    $group_id = intval($_POST['group_id']);
+    $category_key = strtolower(trim($_POST['category_key']));
+    $name = trim($_POST['category_name']);
+
+    $category_key = preg_replace('/[^a-z0-9_]/', '', $category_key);
+
+    if ($group_id > 0 && $category_key !== '' && $name !== '') {
+        $stmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM product_categories WHERE group_id=?");
+        $stmt->execute([$group_id]);
+        $sort_order = $stmt->fetchColumn();
+
+        $stmt = $pdo->prepare("INSERT INTO product_categories (group_id, category_key, name, sort_order, status) VALUES (?, ?, ?, ?, 1)");
+        $stmt->execute([$group_id, $category_key, $name, $sort_order]);
+
+        header("Location: products.php?msg=" . urlencode("✅ 小分类已添加"));
+        exit;
+    }
+}
+
+// ====================
+// 删除小分类
+// ====================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_category'])) {
+    $category_key = $_POST['category_key'] ?? '';
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE category=?");
+    $stmt->execute([$category_key]);
+    $usedCount = (int)$stmt->fetchColumn();
+
+    if ($usedCount > 0) {
+        header("Location: products.php?open_category=1&alert=" . urlencode("这个小分类还有商品，不能删除。请先把商品移去其他分类或删除商品。"));
+        exit;
+    }
+
+    $stmt = $pdo->prepare("DELETE FROM product_categories WHERE category_key=?");
+    $stmt->execute([$category_key]);
+
+    header("Location: products.php?open_category=1&alert=" . urlencode("小分类已删除"));
+    exit;
+}
+
+// ====================
+// 删除大分类
+// ====================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_group'])) {
+    $group_id = intval($_POST['group_id']);
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM product_categories WHERE group_id=?");
+    $stmt->execute([$group_id]);
+    $catCount = (int)$stmt->fetchColumn();
+
+    if ($catCount > 0) {
+        header("Location: products.php?open_category=1&alert=" . urlencode("这个大分类下面还有小分类，不能删除。请先删除里面的小分类。"));
+        exit;
+    }
+
+    $stmt = $pdo->prepare("DELETE FROM category_groups WHERE id=?");
+    $stmt->execute([$group_id]);
+
+    header("Location: products.php?open_category=1&alert=" . urlencode("大分类已删除"));
+    exit;
+}
+
+function moveOrderedRow(PDO $pdo, string $table, int $id, string $direction, ?int $groupId = null): void {
+    $scopeSql = $groupId === null ? '' : ' AND group_id = ?';
+    $params = $groupId === null ? [] : [$groupId];
+
+    $stmt = $pdo->prepare("SELECT id FROM {$table} WHERE status=1{$scopeSql} ORDER BY sort_order ASC, id ASC");
+    $stmt->execute($params);
+    $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    $index = array_search($id, $ids, true);
+
+    if ($index === false) {
+        return;
+    }
+
+    $target = $direction === 'up' ? $index - 1 : $index + 1;
+    if ($target < 0 || $target >= count($ids)) {
+        return;
+    }
+
+    [$ids[$index], $ids[$target]] = [$ids[$target], $ids[$index]];
+    $update = $pdo->prepare("UPDATE {$table} SET sort_order=? WHERE id=?");
+    foreach ($ids as $position => $rowId) {
+        $update->execute([$position + 1, $rowId]);
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_group'])) {
+    moveOrderedRow(
+        $pdo,
+        'category_groups',
+        (int)($_POST['group_id'] ?? 0),
+        $_POST['direction'] ?? 'up'
+    );
+    header('Location: products.php?open_sort=1');
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_category'])) {
+    $categoryId = (int)($_POST['category_id'] ?? 0);
+    $stmt = $pdo->prepare('SELECT group_id FROM product_categories WHERE id=?');
+    $stmt->execute([$categoryId]);
+    $groupId = (int)$stmt->fetchColumn();
+
+    if ($groupId > 0) {
+        moveOrderedRow(
+            $pdo,
+            'product_categories',
+            $categoryId,
+            $_POST['direction'] ?? 'up',
+            $groupId
+        );
+    }
+    header('Location: products.php?open_sort=1');
+    exit;
+}
+
+$groupStmt = $pdo->query("SELECT id, group_key, label, sort_order FROM category_groups WHERE status=1 ORDER BY sort_order ASC, id ASC");
+$groupsForForm = $groupStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$categoryListStmt = $pdo->query(
+    "SELECT
+        c.category_key,
+        c.name AS category_name,
+        g.label AS group_label
+     FROM product_categories c
+     JOIN category_groups g ON c.group_id = g.id
+     WHERE c.status = 1
+     ORDER BY g.sort_order ASC, c.sort_order ASC"
+);
+$categoryListForDelete = $categoryListStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$categorySortStmt = $pdo->query(
+    "SELECT
+        c.id,
+        c.group_id,
+        c.category_key,
+        c.name AS category_name,
+        c.sort_order,
+        g.label AS group_label
+     FROM product_categories c
+     JOIN category_groups g ON c.group_id = g.id
+     WHERE c.status = 1 AND g.status = 1
+     ORDER BY g.sort_order ASC, c.sort_order ASC, c.id ASC"
+);
+$categoriesForSort = $categorySortStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// ====================
 // 上传图片函数
 // ====================
 function uploadImage($fileInput) {
@@ -70,31 +241,6 @@ function uploadImage($fileInput) {
 // ====================
 // 添加商品（自动排最后）
 // ====================
-if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['add_product'])) {
-    $sku=$_POST['sku']; $name=$_POST['name']; $price=floatval($_POST['price']); $stock=intval($_POST['stock']);
-    $category=$_POST['category'];
-    if (!array_key_exists($category,$categories)) $category=array_key_first($categories);
-
-    $stmt=$pdo->prepare("SELECT MAX(sort_order) FROM products WHERE category=?");
-    $stmt->execute([$category]);
-    $max_sort=$stmt->fetchColumn();
-    $sort_order=$max_sort!==null ? $max_sort+1 : 1;
-
-    $image_url=uploadImage('image');
-    $stmt=$pdo->prepare("INSERT INTO products (sku,name,price,stock,category,image_url,sort_order,created_at) VALUES (?,?,?,?,?,?,?,NOW())");
-    $stmt->execute([$sku,$name,$price,$stock,$category,$image_url,$sort_order]);
-
-    // STEP 4: Save logic for 'is_hot'
-    // $is_hot = isset($_POST['is_hot']) ? 1 : 0;
-
-    // Update the database to save the 'is_hot' status
-    // $stmt = $pdo->prepare("UPDATE products SET is_hot = ? WHERE id = ?");
-    // $stmt->execute([$is_hot, $product_id]);
-
-    header("Location: products.php?cat=" . urlencode($category) . "&msg=" . urlencode("✅ 商品已添加"));
-    exit;
-}
-
 // ====================
 // 更新 is_hot（🔥最重要）
 // ====================
@@ -266,20 +412,28 @@ if ($selectedCat !== '') {
 // 查询商品
 // ====================
 if ($selectedCat !== '') {
-    $stmt = $pdo->prepare("SELECT * FROM products WHERE category=? ORDER BY sort_order ASC,id DESC");
+    $stmt = $pdo->prepare("SELECT * FROM products WHERE category=? AND parent_product_id IS NULL ORDER BY sort_order ASC,id DESC");
     $stmt->execute([$selectedCat]);
 } elseif ($selectedGroup !== '') {
     $groupCats = array_keys($categoryGroups[$selectedGroup]['children']);
     $placeholders = implode(',', array_fill(0, count($groupCats), '?'));
 
-    $stmt = $pdo->prepare("SELECT * FROM products WHERE category IN ($placeholders) ORDER BY category ASC, sort_order ASC,id DESC");
+    $stmt = $pdo->prepare("SELECT * FROM products WHERE category IN ($placeholders) AND parent_product_id IS NULL ORDER BY category ASC, sort_order ASC,id DESC");
     $stmt->execute($groupCats);
 } else {
-    $stmt = $pdo->query("SELECT * FROM products ORDER BY category ASC, sort_order ASC,id DESC");
+    $stmt = $pdo->query("SELECT * FROM products WHERE parent_product_id IS NULL ORDER BY category ASC, sort_order ASC,id DESC");
 }
 
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$childrenByParent = [];
+$childStmt = $pdo->query('SELECT * FROM products WHERE parent_product_id IS NOT NULL ORDER BY parent_product_id,sort_order,id');
+foreach ($childStmt->fetchAll(PDO::FETCH_ASSOC) as $child) {
+    $childrenByParent[(int)$child['parent_product_id']][] = $child;
+}
 $msg=$_GET['msg']??'';
+$alert = $_GET['alert'] ?? '';
+$openCategory = $_GET['open_category'] ?? '';
+$openSort = $_GET['open_sort'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -290,8 +444,45 @@ $msg=$_GET['msg']??'';
 <link rel="stylesheet" href="/yummy-diary/backend/css/admin_layout.css">
 <style>
   .table-wrapper{overflow-x:auto;}
-  .product-form-card{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;}
-  .product-form-card .full{grid-column:1 / -1;}
+  .page-header{display:flex;justify-content:space-between;align-items:center;gap:16px;}
+  .page-header .page-title{flex:1;}
+  .page-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+  .category-modal{display:none;position:fixed;inset:0;background:rgba(40,30,20,.35);z-index:999;padding:30px;overflow:auto;}
+  .category-modal.show{display:block;}
+  .category-modal-content{max-width:980px;margin:40px auto;background:#fff;border-radius:28px;padding:24px;box-shadow:0 25px 70px rgba(80,50,30,.22);}
+  .category-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+  .category-modal-header h3{margin:0;}
+  .modal-close{width:42px;height:42px;border-radius:50%;font-size:24px;background:#fffaf4;color:var(--text);}
+  .category-manage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;}
+  .category-mini-form{background:#fffaf4;border:1px solid var(--line);border-radius:22px;padding:18px;display:grid;gap:12px;}
+  .delete-category-area{margin-top:20px;}
+  .delete-split-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;}
+  .delete-panel{background:#fffaf4;border:1px solid var(--line);border-radius:22px;padding:18px;}
+  .delete-panel h4{margin:0 0 14px;color:var(--text);}
+  .delete-list{display:grid;gap:10px;max-height:430px;overflow:auto;padding-right:4px;}
+  .delete-row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;}
+  .delete-row span{font-weight:700;color:var(--text);}
+  .delete-row small{color:var(--muted);font-weight:600;}
+  .sort-section{display:grid;gap:18px;}
+  .sort-panel{background:#fffaf4;border:1px solid var(--line);border-radius:22px;padding:18px;}
+  .sort-panel h4{margin:0 0 14px;color:var(--text);}
+  .sort-list{display:grid;gap:10px;}
+  .sort-row{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:11px 14px;}
+  .sort-position{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--soft);font-weight:800;}
+  .sort-name{display:grid;gap:2px;font-weight:800;color:var(--text);}
+  .sort-name small{color:var(--muted);font-weight:600;}
+  .sort-controls{display:flex;gap:7px;}
+  .sort-controls form{display:inline;}
+  .sort-controls button{min-width:44px;padding:9px 12px;}
+  .sort-group{display:grid;gap:10px;}
+  .sort-children{display:grid;gap:8px;padding-left:22px;border-left:3px solid var(--soft);}
+  @media(max-width:900px){.delete-split-grid{grid-template-columns:1fr;}}
+  @media(max-width:768px){
+    .page-header{flex-wrap:wrap;}
+    .page-actions{display:grid;grid-template-columns:1fr 1fr;}
+    .sort-row{grid-template-columns:42px minmax(0,1fr);}
+    .sort-controls{grid-column:1 / -1;justify-content:flex-end;}
+  }
 </style>
 </head>
 <body>
@@ -303,6 +494,11 @@ $msg=$_GET['msg']??'';
     <div class="page-title">
       <h2>商品管理</h2>
       <p>管理店铺商品、价格、库存和热销状态</p>
+    </div>
+    <div class="page-actions">
+      <a href="add_product.php" class="btn btn-edit">➕ 新增商品</a>
+      <button type="button" class="btn btn-edit" onclick="openCategoryModal()">➕ 分类管理</button>
+      <button type="button" class="btn btn-move" onclick="openSortModal()">↕ 分类排序</button>
     </div>
   </section>
 
@@ -331,23 +527,159 @@ $msg=$_GET['msg']??'';
     <a href="products.php" class="btn btn-move">重置</a>
   </form>
 
-  <?php if($msg): ?><div class="msg"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
+  <div id="categoryModal" class="category-modal" role="dialog" aria-modal="true" aria-label="分类管理">
+    <div class="category-modal-content">
+      <div class="category-modal-header">
+        <h3>分类管理</h3>
+        <button type="button" class="modal-close btn" onclick="closeCategoryModal()" aria-label="关闭">×</button>
+      </div>
 
-  <!-- 添加商品 -->
-  <form class="admin-card product-form-card" method="post" enctype="multipart/form-data">
-    <input type="hidden" name="add_product" value="1">
-    <input type="text" name="sku" placeholder="SKU" required>
-    <input type="text" name="name" placeholder="商品名" required>
-    <input type="number" step="0.01" name="price" placeholder="价格" required>
-    <input type="number" name="stock" placeholder="库存" required>
-    <select name="category">
-      <?php foreach($categories as $key=>$label): ?>
-        <option value="<?= $key ?>" <?= $cat===$key?'selected':'' ?>><?= $label ?></option>
-      <?php endforeach; ?>
-    </select>
-    <input type="file" name="image">
-    <button type="submit" class="btn btn-edit">➕ 添加</button>
-  </form>
+      <div class="category-manage-grid">
+        <form class="category-mini-form" method="post">
+          <h4>新增大分类</h4>
+          <input type="text" name="group_key" placeholder="例如: drinks" required>
+          <input type="text" name="group_label" placeholder="例如: 饮料" required>
+          <button type="submit" name="add_group" value="1" class="btn btn-edit">➕ 添加大分类</button>
+        </form>
+
+        <form class="category-mini-form" method="post">
+          <h4>新增小分类</h4>
+          <label>选择大分类</label>
+          <select name="group_id" required>
+            <option value="">请选择大分类</option>
+            <?php foreach ($groupsForForm as $group): ?>
+              <option value="<?= (int)$group['id'] ?>"><?= htmlspecialchars($group['label']) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <input type="text" name="category_key" placeholder="例如: cola" required>
+          <input type="text" name="category_name" placeholder="例如: 可乐" required>
+          <button type="submit" name="add_category" value="1" class="btn btn-edit">➕ 添加小分类</button>
+        </form>
+      </div>
+
+      <div class="delete-category-area">
+        <h4>删除分类</h4>
+        <div class="delete-split-grid">
+          <div class="delete-panel">
+            <h4>大分类</h4>
+            <div class="delete-list">
+              <?php foreach ($groupsForForm as $group): ?>
+                <div class="delete-row">
+                  <div>
+                    <span><?= htmlspecialchars($group['label']) ?></span>
+                    <small> ID: <?= (int)$group['id'] ?></small>
+                  </div>
+                  <form method="post" onsubmit="return confirm('确定删除这个大分类吗？');">
+                    <input type="hidden" name="group_id" value="<?= (int)$group['id'] ?>">
+                    <button type="submit" name="delete_group" value="1" class="btn btn-delete">删除大分类</button>
+                  </form>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          </div>
+
+          <div class="delete-panel">
+            <h4>小分类</h4>
+            <div class="delete-list">
+              <?php foreach ($categoryListForDelete as $item): ?>
+                <div class="delete-row">
+                  <div>
+                    <span><?= htmlspecialchars($item['group_label']) ?> / <?= htmlspecialchars($item['category_name']) ?></span>
+                    <small> <?= htmlspecialchars($item['category_key']) ?></small>
+                  </div>
+                  <form method="post" onsubmit="return confirm('确定删除这个小分类吗？');">
+                    <input type="hidden" name="category_key" value="<?= htmlspecialchars($item['category_key']) ?>">
+                    <button type="submit" name="delete_category" value="1" class="btn btn-delete">删除小分类</button>
+                  </form>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sortModal" class="category-modal" role="dialog" aria-modal="true" aria-label="分类排序">
+    <div class="category-modal-content">
+      <div class="category-modal-header">
+        <div>
+          <h3>分类排序</h3>
+          <p>调整后会立即改变前端商城左侧分类的显示顺序。</p>
+        </div>
+        <button type="button" class="modal-close btn" onclick="closeSortModal()" aria-label="关闭">×</button>
+      </div>
+
+      <div class="sort-section">
+        <section class="sort-panel">
+          <h4>大分类排序</h4>
+          <div class="sort-list">
+            <?php foreach ($groupsForForm as $index => $group): ?>
+              <div class="sort-row">
+                <div class="sort-position"><?= $index + 1 ?></div>
+                <div class="sort-name">
+                  <?= htmlspecialchars($group['label']) ?>
+                  <small><?= htmlspecialchars($group['group_key']) ?></small>
+                </div>
+                <div class="sort-controls">
+                  <form method="post">
+                    <input type="hidden" name="group_id" value="<?= (int)$group['id'] ?>">
+                    <input type="hidden" name="direction" value="up">
+                    <button type="submit" name="move_group" value="1" class="btn btn-move" <?= $index === 0 ? 'disabled' : '' ?>>↑</button>
+                  </form>
+                  <form method="post">
+                    <input type="hidden" name="group_id" value="<?= (int)$group['id'] ?>">
+                    <input type="hidden" name="direction" value="down">
+                    <button type="submit" name="move_group" value="1" class="btn btn-move" <?= $index === count($groupsForForm) - 1 ? 'disabled' : '' ?>>↓</button>
+                  </form>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </section>
+
+        <section class="sort-panel">
+          <h4>小分类排序</h4>
+          <?php foreach ($groupsForForm as $group): ?>
+            <?php
+              $groupCategories = array_values(array_filter(
+                  $categoriesForSort,
+                  fn($item) => (int)$item['group_id'] === (int)$group['id']
+              ));
+            ?>
+            <div class="sort-group">
+              <strong><?= htmlspecialchars($group['label']) ?></strong>
+              <div class="sort-children">
+                <?php foreach ($groupCategories as $index => $item): ?>
+                  <div class="sort-row">
+                    <div class="sort-position"><?= $index + 1 ?></div>
+                    <div class="sort-name">
+                      <?= htmlspecialchars($item['category_name']) ?>
+                      <small><?= htmlspecialchars($item['category_key']) ?></small>
+                    </div>
+                    <div class="sort-controls">
+                      <form method="post">
+                        <input type="hidden" name="category_id" value="<?= (int)$item['id'] ?>">
+                        <input type="hidden" name="direction" value="up">
+                        <button type="submit" name="move_category" value="1" class="btn btn-move" <?= $index === 0 ? 'disabled' : '' ?>>↑</button>
+                      </form>
+                      <form method="post">
+                        <input type="hidden" name="category_id" value="<?= (int)$item['id'] ?>">
+                        <input type="hidden" name="direction" value="down">
+                        <button type="submit" name="move_category" value="1" class="btn btn-move" <?= $index === count($groupCategories) - 1 ? 'disabled' : '' ?>>↓</button>
+                      </form>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <?php if($msg): ?><div class="msg"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
 
   <div class="table-wrapper">
     <table>
@@ -357,7 +689,10 @@ $msg=$_GET['msg']??'';
         <td><?= $p['id'] ?></td>
         <td><?= htmlspecialchars($p['sku']) ?></td>
         <td><?php if($p['image_url']): ?><img src="/yummy-diary/<?= htmlspecialchars($p['image_url']) ?>" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" class="thumb"><?php endif; ?></td>
-        <td><?= htmlspecialchars($p['name']) ?></td>
+        <td>
+          <?= htmlspecialchars($p['name']) ?>
+          <br><small><strong><?= ($p['product_type'] ?? 'single') === 'grouped' ? '分类商品' : '单商品' ?></strong></small>
+        </td>
         <td>RM <?= number_format($p['price'],2) ?></td>
         <td><?= $p['stock'] ?></td>
         <td><?= $p['sort_order'] ?></td>
@@ -368,17 +703,9 @@ $msg=$_GET['msg']??'';
              class="btn btn-edit">
              ✏️ 编辑
           </a>
-
-        <a href="products.php?cat=<?= urlencode($cat) ?>&move=up&id=<?= $p['id'] ?>" 
-   class="btn btn-move">
-   ⬆
-</a>
-
-          <!-- 🔽 下移 -->
-          <a href="products.php?cat=<?= urlencode($cat) ?>&move=down&id=<?= $p['id'] ?>" 
-   class="btn btn-move">
-   ⬇
-</a>
+          <?php if (($p['product_type'] ?? 'single') === 'grouped'): ?>
+            <button type="button" class="btn btn-move" onclick="const row=document.getElementById('child-<?= (int)$p['id'] ?>');row.hidden=!row.hidden;">展开分类</button>
+          <?php endif; ?>
 
           <!-- ✅ 热销 -->
           <form method="post" style="display:inline;">
@@ -401,11 +728,58 @@ $msg=$_GET['msg']??'';
 
         </td>
       </tr>
+      <?php if (($p['product_type'] ?? 'single') === 'grouped'): ?>
+      <tr id="child-<?= (int)$p['id'] ?>" hidden>
+        <td colspan="8">
+          <?php foreach($childrenByParent[(int)$p['id']] ?? [] as $child): ?>
+            <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;border-bottom:1px solid #eee;">
+              <img src="/yummy-diary/<?= htmlspecialchars($child['image_url'] ?: 'images/soldout.png') ?>" style="width:52px;height:52px;object-fit:cover;border-radius:10px;">
+              <strong><?= htmlspecialchars($child['name']) ?></strong>
+              <span><?= htmlspecialchars($child['sku']) ?></span>
+              <span>RM <?= number_format((float)$child['price'],2) ?></span>
+              <span>库存 <?= (int)$child['stock'] ?></span>
+              <a class="btn btn-edit" href="edit_product.php?id=<?= (int)$child['id'] ?>">编辑</a>
+            </div>
+          <?php endforeach; ?>
+          <?php if(empty($childrenByParent[(int)$p['id']])): ?><p>还没有归入单商品。</p><?php endif; ?>
+        </td>
+      </tr>
+      <?php endif; ?>
       <?php endforeach; ?>
     </table>
   </div>
 </main>
 <script>
+  const alertMsg = <?= json_encode($alert, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+  if (alertMsg) {
+    alert(alertMsg);
+  }
+
+  window.addEventListener('DOMContentLoaded', function () {
+    if (<?= $openCategory === '1' ? 'true' : 'false' ?>) {
+      openCategoryModal();
+    }
+    if (<?= $openSort === '1' ? 'true' : 'false' ?>) {
+      openSortModal();
+    }
+  });
+
+  function openCategoryModal(){
+    document.getElementById('categoryModal').classList.add('show');
+  }
+
+  function closeCategoryModal(){
+    document.getElementById('categoryModal').classList.remove('show');
+  }
+
+  function openSortModal(){
+    document.getElementById('sortModal').classList.add('show');
+  }
+
+  function closeSortModal(){
+    document.getElementById('sortModal').classList.remove('show');
+  }
+
   (function () {
     const groupSelect = document.getElementById('groupSelect');
     const catSelect = document.getElementById('catSelect');
@@ -433,6 +807,7 @@ $msg=$_GET['msg']??'';
       syncCategoryOptions();
     }
   })();
+
 </script>
 </body>
 </html>

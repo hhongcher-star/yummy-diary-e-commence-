@@ -1,7 +1,4 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 require __DIR__ . '/auth_admin.php';
 require __DIR__ . '/../config.php';
 
@@ -55,10 +52,19 @@ $cat = $selectedCat;
 // ====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
     $id = intval($_POST['id']);
+    $targetType = ($_POST['target_type'] ?? 'product') === 'variant' ? 'variant' : 'product';
 
     if (isset($_POST['stock'])) {
-        $stmt = $pdo->prepare("UPDATE products SET stock=? WHERE id=?");
-        $stmt->execute([intval($_POST['stock']), $id]);
+        $newStock = max(0, intval($_POST['stock']));
+        if ($targetType === 'variant') {
+            $stmt = $pdo->prepare("UPDATE product_variants SET stock=? WHERE id=?");
+            $stmt->execute([$newStock, $id]);
+            $pdo->prepare("UPDATE products p JOIN product_variants v ON v.source_product_id=p.id SET p.stock=? WHERE v.id=?")
+                ->execute([$newStock, $id]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE products SET stock=? WHERE id=?");
+            $stmt->execute([$newStock, $id]);
+        }
     }
 
     if (isset($_POST['warning_level'])) {
@@ -74,21 +80,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
 // 查询商品
 // ====================
 if ($selectedCat !== '') {
-    $stmt = $pdo->prepare("SELECT id, sku, name, image_url, stock, warning_level, category FROM products WHERE category=? ORDER BY id DESC");
+    $stmt = $pdo->prepare("SELECT id, sku, name, image_url, stock, warning_level, category, product_type FROM products WHERE category=? AND parent_product_id IS NULL ORDER BY id DESC");
     $stmt->execute([$selectedCat]);
 
 } elseif ($selectedGroup !== '') {
     $groupCats = array_keys($categoryGroups[$selectedGroup]['children']);
     $placeholders = implode(',', array_fill(0, count($groupCats), '?'));
 
-    $stmt = $pdo->prepare("SELECT id, sku, name, image_url, stock, warning_level, category FROM products WHERE category IN ($placeholders) ORDER BY category ASC, id DESC");
+    $stmt = $pdo->prepare("SELECT id, sku, name, image_url, stock, warning_level, category, product_type FROM products WHERE category IN ($placeholders) AND parent_product_id IS NULL ORDER BY category ASC, id DESC");
     $stmt->execute($groupCats);
 
 } else {
-    $stmt = $pdo->query("SELECT id, sku, name, image_url, stock, warning_level, category FROM products ORDER BY category ASC, id DESC");
+    $stmt = $pdo->query("SELECT id, sku, name, image_url, stock, warning_level, category, product_type FROM products WHERE parent_product_id IS NULL ORDER BY category ASC, id DESC");
 }
 
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$groupedIds = array_column(array_filter($products, fn($product) => ($product['product_type'] ?? 'single') === 'grouped'), 'id');
+$variantsByProduct = [];
+if ($groupedIds) {
+    $placeholders = implode(',', array_fill(0, count($groupedIds), '?'));
+    $variantStmt = $pdo->prepare("SELECT v.*,COALESCE(p.warning_level,5) warning_level
+      FROM product_variants v LEFT JOIN products p ON p.id=v.source_product_id
+      WHERE v.product_id IN ($placeholders) ORDER BY v.product_id,v.sort_order,v.id");
+    $variantStmt->execute($groupedIds);
+    foreach ($variantStmt->fetchAll(PDO::FETCH_ASSOC) as $variant) {
+        $variantsByProduct[(int)$variant['product_id']][] = $variant;
+    }
+}
 $msg = $_GET['msg'] ?? '';
 ?>
 <!DOCTYPE html>
@@ -214,14 +232,61 @@ $msg = $_GET['msg'] ?? '';
     font-size:12px;
   }
 
+  .variant-inventory-row{
+    background:#fffaf4;
+  }
+
+  .grouped-parent-row{
+    background:#fff;
+  }
+
+  .grouped-parent-row td{
+    border-bottom:0;
+  }
+
+  .variant-inventory-row td{
+    border-top:1px dashed #ead8c8;
+  }
+
   @media(max-width:768px){
-    .stock-form,
-    .quick-actions{
-      flex-wrap:nowrap;
+    .table-wrapper{
+      overflow:visible;
     }
 
-    .inventory-name{
-      min-width:200px;
+    .inventory-table,
+    .inventory-table tbody,
+    .inventory-table tr,
+    .inventory-table td{
+      display:block;
+      width:100%;
+    }
+
+    .inventory-table tr{
+      margin-bottom:14px;
+      padding:14px;
+      border:1px solid var(--line);
+      border-radius:20px;
+      background:#fff;
+    }
+
+    .inventory-table th{
+      display:none;
+    }
+
+    .inventory-table td{
+      border:0;
+      padding:8px 0;
+      text-align:left;
+    }
+
+    .stock-form,
+    .quick-actions{
+      justify-content:flex-start;
+      flex-wrap:wrap;
+    }
+
+    .stock-form input{
+      width:100px;
     }
   }
 </style>
@@ -245,9 +310,14 @@ $msg = $_GET['msg'] ?? '';
     $totalStock = 0;
 
     foreach ($products as $item) {
-        $totalStock += (int)$item['stock'];
-        if ((int)$item['stock'] < (int)$item['warning_level']) {
-            $lowStockCount++;
+        if (($item['product_type'] ?? 'single') === 'grouped') {
+            foreach ($variantsByProduct[(int)$item['id']] ?? [] as $variant) {
+                $totalStock += (int)$variant['stock'];
+                if ((int)$variant['stock'] < (int)$variant['warning_level']) $lowStockCount++;
+            }
+        } else {
+            $totalStock += (int)$item['stock'];
+            if ((int)$item['stock'] < (int)$item['warning_level']) $lowStockCount++;
         }
     }
   ?>
@@ -314,9 +384,13 @@ $msg = $_GET['msg'] ?? '';
       </tr>
 
       <?php foreach($products as $p): ?>
-        <?php $isLow = (int)$p['stock'] < (int)$p['warning_level']; ?>
+        <?php
+          $isGrouped = ($p['product_type'] ?? 'single') === 'grouped';
+          $isLow = !$isGrouped && (int)$p['stock'] < (int)$p['warning_level'];
+          $displayStock = $isGrouped ? array_sum(array_column($variantsByProduct[(int)$p['id']] ?? [], 'stock')) : (int)$p['stock'];
+        ?>
 
-        <tr>
+        <tr class="<?= $isGrouped ? 'grouped-parent-row' : '' ?>">
           <td><?= $p['id'] ?></td>
           <td><?= htmlspecialchars($p['sku']) ?></td>
 
@@ -332,6 +406,7 @@ $msg = $_GET['msg'] ?? '';
 
           <td class="inventory-name">
             <?= htmlspecialchars($p['name']) ?>
+            <br><small><strong><?= $isGrouped ? '分类商品' : '单商品' ?></strong></small>
 
             <?php if($isLow): ?>
               <br>
@@ -348,14 +423,15 @@ $msg = $_GET['msg'] ?? '';
           </td>
 
           <td>
-            <form method="post" class="stock-form">
+            <?php if(!$isGrouped): ?><form method="post" class="stock-form">
               <input type="hidden" name="id" value="<?= $p['id'] ?>">
               <input type="number"
                      name="stock"
-                     value="<?= $p['stock'] ?>"
+                     value="<?= $displayStock ?>"
+                     <?= $isGrouped ? 'disabled' : '' ?>
                      class="<?= $isLow ? 'stock-low' : 'stock-ok' ?>">
-              <button type="submit" class="btn btn-edit">💾 更新</button>
-            </form>
+              <button type="submit" class="btn btn-edit" <?= $isGrouped ? 'disabled' : '' ?>>💾 更新</button>
+            </form><?php else: ?><span class="inventory-category">由分类项目管理</span><?php endif; ?>
           </td>
 
           <td>
@@ -369,7 +445,7 @@ $msg = $_GET['msg'] ?? '';
           </td>
 
           <td>
-            <div class="quick-actions">
+            <?php if(!$isGrouped): ?><div class="quick-actions">
               <form method="post">
                 <input type="hidden" name="id" value="<?= $p['id'] ?>">
                 <input type="hidden" name="stock" value="<?= $p['stock'] + 1 ?>">
@@ -381,9 +457,21 @@ $msg = $_GET['msg'] ?? '';
                 <input type="hidden" name="stock" value="<?= max(0, $p['stock'] - 1) ?>">
                 <button type="submit" class="btn btn-delete">➖ 减少 1</button>
               </form>
-            </div>
+            </div><?php else: ?><span class="inventory-category">请在下方调整</span><?php endif; ?>
           </td>
         </tr>
+        <?php if($isGrouped): foreach($variantsByProduct[(int)$p['id']] ?? [] as $variant): $variantLow=(int)$variant['stock'] < (int)$variant['warning_level']; ?>
+          <tr class="variant-inventory-row">
+            <td>↳ <?= (int)$variant['id'] ?></td>
+            <td><?= htmlspecialchars($variant['sku']) ?></td>
+            <td><img src="/yummy-diary/<?= htmlspecialchars($variant['image_url'] ?: 'images/soldout.png') ?>" class="thumb" onerror="this.src='/yummy-diary/images/soldout.png'"></td>
+            <td class="inventory-name"><?= htmlspecialchars($variant['variant_name']) ?><br><small>分类项目</small><?php if($variantLow): ?><br><span class="low-badge">库存不足</span><?php endif; ?></td>
+            <td><span class="inventory-category">属于：<?= htmlspecialchars($p['name']) ?></span></td>
+            <td><form method="post" class="stock-form"><input type="hidden" name="id" value="<?= (int)$variant['id'] ?>"><input type="hidden" name="target_type" value="variant"><input type="number" name="stock" value="<?= (int)$variant['stock'] ?>" class="<?= $variantLow?'stock-low':'stock-ok' ?>"><button class="btn btn-edit">更新</button></form></td>
+            <td><?= (int)$variant['warning_level'] ?></td>
+            <td><div class="quick-actions"><form method="post"><input type="hidden" name="id" value="<?= (int)$variant['id'] ?>"><input type="hidden" name="target_type" value="variant"><input type="hidden" name="stock" value="<?= (int)$variant['stock']+1 ?>"><button class="btn btn-move">＋1</button></form><form method="post"><input type="hidden" name="id" value="<?= (int)$variant['id'] ?>"><input type="hidden" name="target_type" value="variant"><input type="hidden" name="stock" value="<?= max(0,(int)$variant['stock']-1) ?>"><button class="btn btn-delete">－1</button></form></div></td>
+          </tr>
+        <?php endforeach; endif; ?>
       <?php endforeach; ?>
     </table>
   </div>

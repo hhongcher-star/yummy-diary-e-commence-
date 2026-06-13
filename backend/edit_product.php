@@ -1,7 +1,4 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 require __DIR__ . '/auth_admin.php';
 require __DIR__ . '/../config.php';
 
@@ -49,6 +46,14 @@ $p = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$p) {
     die("❌ 未找到商品");
 }
+$variantStmt = $pdo->prepare('SELECT * FROM product_variants WHERE product_id=? ORDER BY sort_order,id');
+$variantStmt->execute([$id]);
+$productVariants = $variantStmt->fetchAll(PDO::FETCH_ASSOC);
+$availableStmt = $pdo->prepare("SELECT p.id,p.sku,p.name,p.price,p.stock,p.image_url,p.parent_product_id,parent.name parent_name
+  FROM products p LEFT JOIN products parent ON parent.id=p.parent_product_id
+  WHERE p.product_type='single' AND p.id<>? ORDER BY p.name,p.sku");
+$availableStmt->execute([$id]);
+$availableSingles = $availableStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // ====================
 // 更新保存
@@ -61,6 +66,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $category = $_POST['category'];
     $sort_order = $_POST['sort_order'] !== "" ? intval($_POST['sort_order']) : $p['sort_order'];
     $is_hot = isset($_POST['is_hot']) ? 1 : 0;
+    $productType = ($_POST['product_type'] ?? 'single') === 'grouped' ? 'grouped' : 'single';
+    $variantFlavors = null;
+    $variantSizes = null;
+    if ($productType === 'grouped') {
+        $firstSourceId = (int)($_POST['source_product_id'][0] ?? 0);
+        if ($firstSourceId > 0) {
+            $firstSourceStmt = $pdo->prepare("SELECT sku,price FROM products WHERE id=?");
+            $firstSourceStmt->execute([$firstSourceId]);
+            $firstSource = $firstSourceStmt->fetch();
+            $sku = $firstSource['sku'] ?? $sku;
+            $price = (float)($firstSource['price'] ?? $price);
+        } else {
+            $sku = trim($_POST['variant_sku'][0] ?? $sku);
+            $price = (float)($_POST['variant_price'][0] ?? $price);
+        }
+        $stock = 0;
+    }
 
     if (!array_key_exists($category, $categories)) {
         $category = array_key_first($categories);
@@ -98,13 +120,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // 更新数据库
-    $stmt = $pdo->prepare("UPDATE products 
-        SET sku=?, name=?, price=?, stock=?, category=?, image_url=?, sort_order=?, is_hot=? 
+    $pdo->beginTransaction();
+    $stmt = $pdo->prepare("UPDATE products
+        SET sku=?, name=?, product_type=?, variant_flavors=?, variant_sizes=?, price=?, stock=?, category=?, image_url=?, sort_order=?, is_hot=?
         WHERE id=?");
 
     $stmt->execute([
         $sku,
         $name,
+        $productType,
+        $variantFlavors,
+        $variantSizes,
         $price,
         $stock,
         $category,
@@ -113,6 +139,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $is_hot,
         $id
     ]);
+    $pdo->prepare('UPDATE products SET parent_product_id=NULL WHERE parent_product_id=?')->execute([$id]);
+    $pdo->prepare('DELETE FROM product_variants WHERE product_id=?')->execute([$id]);
+    if ($productType === 'grouped') {
+        $insertVariant = $pdo->prepare('INSERT INTO product_variants
+          (product_id,variant_name,sku,price,stock,image_url,sort_order) VALUES (?,?,?,?,?,?,?)');
+        foreach (($_POST['variant_name'] ?? []) as $index => $variantName) {
+            $variantName = trim($variantName);
+            $sourceId = (int)($_POST['source_product_id'][$index] ?? 0);
+            if ($variantName === '') continue;
+            $source = null;
+            if ($sourceId > 0) {
+                $sourceStmt = $pdo->prepare("SELECT sku,price,stock,image_url FROM products WHERE id=? AND product_type='single'");
+                $sourceStmt->execute([$sourceId]);
+                $source = $sourceStmt->fetch();
+                if (!$source) continue;
+                $pdo->prepare('DELETE FROM product_variants WHERE source_product_id=?')->execute([$sourceId]);
+            }
+            $variantSku = trim($_POST['variant_sku'][$index] ?? '');
+            $variantPrice = (float)($_POST['variant_price'][$index] ?? 0);
+            $variantStock = max(0, (int)($_POST['variant_stock'][$index] ?? 0));
+            $variantImage = trim($_POST['existing_variant_image'][$index] ?? '');
+            if (isset($_FILES['variant_image']['error'][$index]) && $_FILES['variant_image']['error'][$index] === UPLOAD_ERR_OK) {
+                $allowed = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'];
+                $tmp = $_FILES['variant_image']['tmp_name'][$index];
+                $mime = mime_content_type($tmp);
+                if (isset($allowed[$mime]) && $_FILES['variant_image']['size'][$index] <= 2 * 1024 * 1024) {
+                    $filename = uniqid('', true) . '.' . $allowed[$mime];
+                    if (move_uploaded_file($tmp, __DIR__ . '/../frontend/uploads/' . $filename)) {
+                        $variantImage = 'frontend/uploads/' . $filename;
+                    }
+                }
+            }
+            $insertVariant = $pdo->prepare('INSERT INTO product_variants
+              (product_id,source_product_id,variant_name,sku,price,stock,image_url,sort_order) VALUES (?,?,?,?,?,?,?,?)');
+            if ($variantSku === '') continue;
+            $insertVariant->execute([$id,$sourceId ?: null,$variantName,$variantSku,$variantPrice,$variantStock,$variantImage ?: null,$index+1]);
+            if ($sourceId > 0) {
+                $pdo->prepare('UPDATE products SET name=?,sku=?,price=?,stock=?,image_url=?,parent_product_id=? WHERE id=?')
+                    ->execute([$variantName,$variantSku,$variantPrice,$variantStock,$variantImage ?: null,$id,$sourceId]);
+            }
+        }
+    }
+    $pdo->commit();
 
     header("Location: products.php?cat=" . urlencode($category) . "&msg=" . urlencode("✅ 商品已更新"));
     exit;
@@ -254,6 +323,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     flex-wrap:wrap;
     margin-top:20px;
   }
+  .type-choice{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .type-choice label{padding:16px;border:1px solid var(--line);border-radius:18px;background:#fffaf4;font-weight:800;}
+  .variant-fields{display:none;padding:18px;border:1px dashed #d8bfa4;border-radius:20px;background:#fffaf4;}
+  .variant-fields.show{display:block;}
+  .variant-head{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+.variant-row{
+  display:grid;
+  grid-template-columns:
+    minmax(140px,1fr)
+    minmax(120px,1fr)
+    minmax(120px,1fr)
+    minmax(100px,1fr)
+    64px
+    minmax(170px,1fr)
+    auto;
+  gap:14px;
+  padding:16px;
+  margin-top:12px;
+  border:1px solid #f2bfd5;
+  border-radius:18px;
+  background:#fff;
+  align-items:center;
+}  
+  .variant-row{
+  display:grid;
+  grid-template-columns:
+    minmax(170px,1.2fr)
+    minmax(120px,1fr)
+    minmax(120px,1fr)
+    minmax(100px,.8fr)
+    64px
+    minmax(170px,1fr);
+  gap:14px;
+  padding:16px;
+  margin-top:12px;
+  border:1px solid #f2bfd5;
+  border-radius:18px;
+  background:#fff;
+  align-items:center;
+}
+
+.remove-variant{
+  grid-column:1 / -1;
+  width:180px;
+  border:1px solid #ffb4c8;
+  background:#fff;
+  color:#d33;
+  border-radius:12px;
+  padding:10px 12px;
+}
+  .variant-photo{width:58px;height:58px;border-radius:14px;border:1px solid #ead8c8;background:#fffaf4;object-fit:cover;}
+  .remove-variant{
+  grid-column:1 / -1;
+  width:180px;
+  border:1px solid #ffb4c8;
+  background:#fff;
+  color:#d33;
+  border-radius:12px;
+  padding:10px 12px;
+}
+  .variant-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .product-picker{display:none;position:fixed;inset:0;z-index:3000;background:rgba(30,24,22,.42);padding:34px;}
+  .product-picker.show{display:block;}
+  .picker-card{max-width:1180px;height:calc(100vh - 68px);margin:auto;background:#fff;border-radius:28px;padding:24px;box-sizing:border-box;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(50,35,25,.25);}
+  .picker-head{display:flex;justify-content:space-between;align-items:center;gap:14px;}
+  .picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;overflow:auto;padding:18px 4px;}
+  .picker-product{display:grid;grid-template-columns:74px 1fr;gap:12px;text-align:left;border:1px solid var(--line);border-radius:18px;padding:12px;background:#fff;cursor:pointer;}
+  .picker-product:hover{border-color:#c8a987;background:#fffaf4;}
+  .picker-product img{width:74px;height:74px;object-fit:cover;border-radius:12px;}
+  .picker-product strong,.picker-product span,.picker-product small{display:block;}
+  .picker-product small{color:var(--muted);margin-top:3px;}
+  .picker-close{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:22px;}
 
   @media(max-width:900px){
     .edit-layout{
@@ -275,6 +416,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       width:100%;
     }
   }
+@media(max-width:1100px){
+  .variant-row{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .variant-photo{
+    width:74px;
+    height:74px;
+  }
+}  @media(max-width:650px){.variant-row,.variant-row.variant-existing{grid-template-columns:1fr;}}
 </style>
 </head>
 
@@ -312,10 +463,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <form class="admin-card" method="post" enctype="multipart/form-data">
       <div class="form-section">
+        <h3 class="section-title">商品类型</h3>
+        <div class="type-choice">
+          <label><input type="radio" name="product_type" value="single" <?= ($p['product_type'] ?? 'single') === 'single' ? 'checked' : '' ?>> 单商品</label>
+          <label><input type="radio" name="product_type" value="grouped" <?= ($p['product_type'] ?? 'single') === 'grouped' ? 'checked' : '' ?>> 分类商品</label>
+        </div>
+      </div>
+      <div class="form-section">
         <h3 class="section-title">基本资料</h3>
 
         <div class="edit-form-grid">
-          <div class="form-field">
+          <div class="form-field single-only">
             <label>SKU</label>
             <input type="text"
                    name="sku"
@@ -331,7 +489,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                    required>
           </div>
 
-          <div class="form-field">
+          <div class="form-field single-only">
             <label>价格</label>
             <input type="number"
                    step="0.01"
@@ -340,7 +498,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                    required>
           </div>
 
-          <div class="form-field">
+          <div class="form-field single-only">
             <label>库存</label>
             <input type="number"
                    name="stock"
@@ -368,6 +526,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="number"
                    name="sort_order"
                    value="<?= (int)$p['sort_order'] ?>">
+          </div>
+        </div>
+      </div>
+
+      <div id="variantFields" class="form-section variant-fields <?= ($p['product_type'] ?? 'single') === 'grouped' ? 'show' : '' ?>">
+        <div class="variant-head">
+          <div><h3 class="section-title">分类商品项目</h3><p>每项拥有独立名称、SKU、价格、库存和图片。</p></div>
+          <div class="variant-actions">
+            <button type="button" id="addVariant" class="btn btn-edit">＋ 添加新分类</button>
+            <button type="button" id="useExisting" class="btn btn-move">使用现有商品</button>
+          </div>
+        </div>
+        <div id="variantList">
+          <?php foreach($productVariants as $variant): ?>
+            <div class="variant-row <?= !empty($variant['source_product_id']) ? 'variant-existing' : '' ?>">
+              <input name="variant_name[]" value="<?= htmlspecialchars($variant['variant_name']) ?>" placeholder="分类名称" required>
+              <input type="hidden" name="source_product_id[]" value="<?= (int)($variant['source_product_id'] ?? 0) ?>">
+              <?php if(!empty($variant['source_product_id'])): ?>
+                <input name="variant_sku[]" value="<?= htmlspecialchars($variant['sku']) ?>" placeholder="SKU" required>
+                <input type="number" step=".01" min="0" name="variant_price[]" value="<?= htmlspecialchars($variant['price']) ?>" placeholder="价格 RM" required>
+                <input type="number" min="0" name="variant_stock[]" value="<?= (int)$variant['stock'] ?>" placeholder="库存" required>
+                <input type="hidden" name="existing_variant_image[]" value="<?= htmlspecialchars($variant['image_url'] ?? '') ?>">
+                <img class="variant-photo" src="/yummy-diary/<?= htmlspecialchars($variant['image_url'] ?: 'images/soldout.png') ?>" alt="分类图片预览" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';">
+                <input type="file" name="variant_image[]" accept="image/jpeg,image/png,image/gif,image/webp">
+              <?php else: ?>
+                <input name="variant_sku[]" value="<?= htmlspecialchars($variant['sku']) ?>" placeholder="SKU" required>
+                <input type="number" step=".01" min="0" name="variant_price[]" value="<?= htmlspecialchars($variant['price']) ?>" placeholder="价格 RM" required>
+                <input type="number" min="0" name="variant_stock[]" value="<?= (int)$variant['stock'] ?>" placeholder="库存" required>
+                <input type="hidden" name="existing_variant_image[]" value="<?= htmlspecialchars($variant['image_url'] ?? '') ?>">
+                <img class="variant-photo" src="/yummy-diary/<?= htmlspecialchars($variant['image_url'] ?: 'images/soldout.png') ?>" alt="分类图片预览" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';">
+                <input type="file" name="variant_image[]" accept="image/jpeg,image/png,image/gif,image/webp">
+              <?php endif; ?>
+              <button type="button" class="remove-variant">删除</button>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+
+      <div id="productPicker" class="product-picker">
+        <div class="picker-card">
+          <div class="picker-head"><div><h3>选择现有商品</h3><p>可选择独立单商品，也可把其他分类商品下的子商品移动到这里。</p></div><button type="button" class="picker-close">×</button></div>
+          <input id="pickerSearch" type="search" placeholder="搜索商品名称或 SKU">
+          <div class="picker-grid">
+            <?php foreach($availableSingles as $single): ?>
+              <button type="button" class="picker-product" data-search="<?= htmlspecialchars(strtolower($single['name'].' '.$single['sku'])) ?>" data-id="<?= (int)$single['id'] ?>" data-name="<?= htmlspecialchars($single['name'],ENT_QUOTES) ?>" data-sku="<?= htmlspecialchars($single['sku'],ENT_QUOTES) ?>" data-price="<?= htmlspecialchars($single['price'],ENT_QUOTES) ?>" data-stock="<?= (int)$single['stock'] ?>" data-image="<?= htmlspecialchars($single['image_url'] ?: 'images/soldout.png',ENT_QUOTES) ?>">
+                <img src="/yummy-diary/<?= htmlspecialchars($single['image_url'] ?: 'images/soldout.png') ?>">
+                <span><strong><?= htmlspecialchars($single['name']) ?></strong><small><?= htmlspecialchars($single['sku']) ?> · RM <?= number_format((float)$single['price'],2) ?> · 库存 <?= (int)$single['stock'] ?></small><?php if($single['parent_name']): ?><small>目前属于：<?= htmlspecialchars($single['parent_name']) ?></small><?php endif; ?></span>
+              </button>
+            <?php endforeach; ?>
           </div>
         </div>
       </div>
@@ -405,6 +612,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
   </div>
 </main>
-
+<script>
+const variantFields=document.getElementById('variantFields');
+const variantList=document.getElementById('variantList');
+function bindRemove(row){row.querySelector('.remove-variant').onclick=()=>row.remove();}
+function bindImagePreview(row){
+  const fileInput=row.querySelector('input[type="file"][name="variant_image[]"]');
+  const img=row.querySelector('.variant-photo');
+  if(!fileInput||!img)return;
+  fileInput.addEventListener('change',()=>{
+    const file=fileInput.files[0];
+    if(!file)return;
+    img.src=URL.createObjectURL(file);
+  });
+}
+const singleOptions=<?= json_encode($availableSingles, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+function addVariant(product=null){const row=document.createElement('div');row.className='variant-row'+(product?' variant-existing':'');row.innerHTML=product?`<input name="variant_name[]" placeholder="分类名称" required value="${product.name}"><input type="hidden" name="source_product_id[]" value="${product.id}"><input type="hidden" name="variant_sku[]" value=""><input type="hidden" name="variant_price[]" value=""><input type="hidden" name="variant_stock[]" value=""><input type="hidden" name="existing_variant_image[]" value=""><input type="file" name="variant_image[]" hidden><img class="variant-photo" src="/yummy-diary/images/soldout.png" alt="分类图片预览" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';"><div><strong>${product.sku}</strong><br><span>RM ${product.price} · 库存 ${product.stock}</span></div><button type="button" class="remove-variant">删除</button>`:`<input name="variant_name[]" placeholder="分类名称" required><input type="hidden" name="source_product_id[]" value="0"><input name="variant_sku[]" placeholder="SKU" required><input type="number" step=".01" min="0" name="variant_price[]" placeholder="价格 RM" required><input type="number" min="0" name="variant_stock[]" placeholder="库存" required><input type="hidden" name="existing_variant_image[]" value=""><img class="variant-photo" src="/yummy-diary/images/soldout.png" alt="分类图片预览" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';"><input type="file" name="variant_image[]" accept="image/jpeg,image/png,image/gif,image/webp"><button type="button" class="remove-variant">删除</button>`;bindRemove(row);bindImagePreview(row);variantList.appendChild(row);}
+document.querySelectorAll('.variant-row').forEach(row=>{bindRemove(row);bindImagePreview(row);});
+document.getElementById('addVariant').onclick=()=>addVariant();
+const picker=document.getElementById('productPicker');
+document.getElementById('useExisting').onclick=()=>picker.classList.add('show');
+picker.querySelector('.picker-close').onclick=()=>picker.classList.remove('show');
+picker.addEventListener('click',e=>{if(e.target===picker)picker.classList.remove('show')});
+picker.querySelectorAll('.picker-product').forEach(card=>card.onclick=()=>{addVariant({id:card.dataset.id,name:card.dataset.name,sku:card.dataset.sku,price:card.dataset.price,stock:card.dataset.stock});const row=variantList.lastElementChild;row.classList.remove('variant-existing');row.querySelector('[name="variant_sku[]"]').type='text';row.querySelector('[name="variant_sku[]"]').value=card.dataset.sku;row.querySelector('[name="variant_price[]"]').type='number';row.querySelector('[name="variant_price[]"]').value=card.dataset.price;row.querySelector('[name="variant_stock[]"]').type='number';row.querySelector('[name="variant_stock[]"]').value=card.dataset.stock;row.querySelector('[name="existing_variant_image[]"]').value=card.dataset.image;const image=row.querySelector('.variant-photo');image.src='/yummy-diary/'+card.dataset.image;const file=row.querySelector('[name="variant_image[]"]');file.hidden=false;file.accept='image/jpeg,image/png,image/gif,image/webp';bindImagePreview(row);picker.classList.remove('show')});
+document.getElementById('pickerSearch').oninput=e=>{const q=e.target.value.toLowerCase();picker.querySelectorAll('.picker-product').forEach(card=>card.hidden=!card.dataset.search.includes(q))};
+document.querySelectorAll('[name=product_type]').forEach(radio=>{
+  radio.addEventListener('change',()=>{const grouped=radio.value==='grouped'&&radio.checked;variantFields.classList.toggle('show',grouped);document.querySelectorAll('.single-only').forEach(el=>el.style.display=grouped?'none':'flex');document.querySelectorAll('.single-only input').forEach(el=>el.required=!grouped);if(grouped&&!variantList.children.length)addVariant();});
+});
+if(document.querySelector('[name=product_type]:checked').value==='grouped'){document.querySelectorAll('.single-only').forEach(el=>el.style.display='none');document.querySelectorAll('.single-only input').forEach(el=>el.required=false);}
+</script>
 </body>
 </html>

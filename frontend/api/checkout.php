@@ -15,6 +15,7 @@ if (empty($_SESSION['cart'])) {
 }
 
 $orderNumber = date('YmdHis') . '-' . random_int(100, 999);
+$accessToken = bin2hex(random_bytes(32));
 $orderTime = date('Y-m-d H:i:s');
 
 try {
@@ -31,6 +32,7 @@ try {
 
     foreach ($_SESSION['cart'] as $cartItem) {
         $productId = (int)($cartItem['id'] ?? 0);
+        $variantId = (int)($cartItem['variant_id'] ?? 0);
         $qty = (int)($cartItem['qty'] ?? 0);
 
         if ($productId <= 0 || $qty <= 0) {
@@ -43,26 +45,56 @@ try {
         if (!$product) {
             throw new RuntimeException('商品不存在');
         }
-        if ((int)$product['stock'] < $qty) {
+        $variant = null;
+        if ($variantId > 0) {
+            $variantStmt = $pdo->prepare('SELECT id,sku,variant_name,price,stock FROM product_variants WHERE id=? AND product_id=? FOR UPDATE');
+            $variantStmt->execute([$variantId, $productId]);
+            $variant = $variantStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$variant) throw new RuntimeException('分类商品不存在');
+        }
+        $availableStock = (int)($variant['stock'] ?? $product['stock']);
+        if ($availableStock < $qty) {
             throw new RuntimeException('库存不足：' . $product['name']);
         }
 
-        $price = (float)$product['price'];
+        $price = (float)($variant['price'] ?? $product['price']);
         $total += $price * $qty;
         $items[] = [
             'id' => (int)$product['id'],
-            'sku' => $product['sku'],
-            'name' => $product['name'],
+            'variant_id' => $variantId,
+            'sku' => $variant['sku'] ?? $product['sku'],
+            'name' => trim((string)($cartItem['name'] ?? $product['name'])),
             'price' => $price,
             'qty' => $qty,
         ];
     }
 
+    $shipping = 7.50;
+    if ($total >= 49.90) {
+        $shipping = 0.00;
+    } elseif ($total >= 39.90) {
+        $shipping = 1.90;
+    } elseif ($total >= 29.90) {
+        $shipping = 3.50;
+    } elseif ($total >= 19.90) {
+        $shipping = 5.90;
+    }
+    $grandTotal = $total + $shipping;
+
     $orderStmt = $pdo->prepare(
-        "INSERT INTO orders (order_number, created_at, total, status)
-         VALUES (?, ?, ?, 'pending')"
+        "INSERT INTO orders
+            (order_number, access_token, created_at, total, shipping, grand_total, region, status, currency)
+         VALUES
+            (?, ?, ?, ?, ?, ?, '', 'pending', 'MYR')"
     );
-    $orderStmt->execute([$orderNumber, $orderTime, $total]);
+    $orderStmt->execute([
+        $orderNumber,
+        $accessToken,
+        $orderTime,
+        $total,
+        $shipping,
+        $grandTotal,
+    ]);
     $orderId = (int)$pdo->lastInsertId();
 
     $itemStmt = $pdo->prepare(
@@ -75,6 +107,9 @@ try {
          SET stock = stock - ?
          WHERE id = ? AND stock >= ?'
     );
+    $variantStockStmt = $pdo->prepare(
+        'UPDATE product_variants SET stock=stock-? WHERE id=? AND stock>=?'
+    );
 
     foreach ($items as $item) {
         $itemStmt->execute([
@@ -86,19 +121,28 @@ try {
             $item['price'],
         ]);
 
-        $stockStmt->execute([$item['qty'], $item['id'], $item['qty']]);
-        if ($stockStmt->rowCount() !== 1) {
+        if ($item['variant_id'] > 0) {
+            $variantStockStmt->execute([$item['qty'], $item['variant_id'], $item['qty']]);
+            $stockUpdated = $variantStockStmt->rowCount() === 1;
+        } else {
+            $stockStmt->execute([$item['qty'], $item['id'], $item['qty']]);
+            $stockUpdated = $stockStmt->rowCount() === 1;
+        }
+        if (!$stockUpdated) {
             throw new RuntimeException('库存更新失败：' . $item['name']);
         }
     }
 
     $pdo->commit();
+    $_SESSION['order_access_tokens'][$orderNumber] = $accessToken;
     unset($_SESSION['cart'], $_SESSION['pending_order'], $_SESSION['orders']);
 
     echo json_encode([
         'success' => true,
         'order_number' => $orderNumber,
-        'redirect' => '../receipt.php?order_number=' . urlencode($orderNumber),
+        'access_token' => $accessToken,
+        'receipt_url' => 'receipt.php?order_number=' . rawurlencode($orderNumber)
+            . '&token=' . rawurlencode($accessToken),
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) {

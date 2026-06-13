@@ -14,6 +14,10 @@ if (!isset($_SESSION['cart'])) {
 $mode = $_GET['mode'] ?? 'add';
 
 $sku = trim($_POST['sku'] ?? '');
+$flavor = trim($_POST['flavor'] ?? '');
+$size = trim($_POST['size'] ?? '');
+$cartKey = trim($_POST['cart_key'] ?? '');
+$variantId = max(0, (int)($_POST['variant_id'] ?? 0));
 
 switch ($mode) {
 
@@ -30,7 +34,7 @@ switch ($mode) {
 
         foreach ($_SESSION['cart'] as $k => &$item) {
 
-            if ((string)$item['sku'] === (string)$sku) {
+            if ((string)($item['cart_key'] ?? $item['sku']) === (string)($cartKey !== '' ? $cartKey : $sku)) {
 
                 $item['qty']--;
 
@@ -63,7 +67,7 @@ switch ($mode) {
     case 'add':
     default:
 
-        if ($sku === '') {
+        if ($sku === '' && $variantId <= 0) {
 
             echo json_encode([
                 'success' => false,
@@ -74,21 +78,14 @@ switch ($mode) {
         }
 
         // 只从数据库取商品资料
-        $stmt = $pdo->prepare("
-            SELECT
-                id,
-                sku,
-                name,
-                price,
-                image_url,
-                stock
-            FROM products
-            WHERE sku = ?
-            LIMIT 1
-        ");
-
-        $stmt->execute([$sku]);
-
+        if ($variantId > 0) {
+            $stmt = $pdo->prepare('SELECT p.id,p.sku,p.name,p.price,p.image_url,p.stock
+              FROM product_variants v JOIN products p ON p.id=v.product_id WHERE v.id=? LIMIT 1');
+            $stmt->execute([$variantId]);
+        } else {
+            $stmt = $pdo->prepare('SELECT id,sku,name,price,image_url,stock FROM products WHERE sku=? LIMIT 1');
+            $stmt->execute([$sku]);
+        }
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$product) {
@@ -101,7 +98,20 @@ switch ($mode) {
             exit;
         }
 
-        $stock = (int)$product['stock'];
+        $variant = null;
+        if ($variantId > 0) {
+            $variantStmt = $pdo->prepare('SELECT * FROM product_variants WHERE id=? AND product_id=? LIMIT 1');
+            $variantStmt->execute([$variantId, $product['id']]);
+            $variant = $variantStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$variant) {
+                echo json_encode(['success'=>false,'message'=>'分类商品不存在'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
+        $stock = (int)($variant['stock'] ?? $product['stock']);
+        $cartSku = (string)($variant['sku'] ?? $product['sku']);
+        $cartKey = $variant ? 'variant:' . $variant['id'] : $product['sku'];
 
         if ($stock <= 0) {
 
@@ -114,10 +124,24 @@ switch ($mode) {
         }
 
         $found = false;
+        $totalProductQty = 0;
+        foreach ($_SESSION['cart'] as $cartItem) {
+            if ((string)($cartItem['cart_key'] ?? $cartItem['sku']) === $cartKey) {
+                $totalProductQty += (int)$cartItem['qty'];
+            }
+        }
+
+        if ($totalProductQty >= $stock) {
+            echo json_encode([
+                'success' => false,
+                'message' => '已达到库存上限'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
 
         foreach ($_SESSION['cart'] as &$item) {
 
-            if ((string)$item['sku'] === (string)$sku) {
+            if ((string)($item['cart_key'] ?? $item['sku']) === $cartKey) {
 
                 if ($item['qty'] < $stock) {
 
@@ -145,10 +169,12 @@ switch ($mode) {
 
             $_SESSION['cart'][] = [
                 'id'    => (int)$product['id'],
-                'sku'   => $product['sku'],
-                'name'  => $product['name'],
-                'price' => (float)$product['price'],
-                'img'   => $product['image_url'],
+                'variant_id' => $variant ? (int)$variant['id'] : null,
+                'sku'   => $cartSku,
+                'cart_key' => $cartKey,
+                'name'  => $product['name'] . ($variant ? ' · ' . $variant['variant_name'] : ''),
+                'price' => (float)($variant['price'] ?? $product['price']),
+                'img'   => $variant['image_url'] ?: $product['image_url'],
                 'qty'   => 1
             ];
         }

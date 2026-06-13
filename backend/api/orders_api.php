@@ -1,11 +1,4 @@
 <?php
-// ====================
-// 开启调试（开发用，生产建议关闭）
-// ====================
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 require __DIR__ . '/../auth_admin.php';
 require __DIR__ . '/../../config.php';
 header('Content-Type: application/json');

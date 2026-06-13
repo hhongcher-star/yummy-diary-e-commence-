@@ -1,30 +1,65 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 require __DIR__ . '/auth_admin.php';
 require __DIR__ . '/../config.php';
 
 date_default_timezone_set("Asia/Kuala_Lumpur");
+$csrfToken = $_SESSION['admin_csrf_token'] ??= bin2hex(random_bytes(32));
 
-// ✅ 批量操作
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $submittedToken = (string)($_POST['csrf_token'] ?? '');
+    if (!hash_equals($csrfToken, $submittedToken)) {
+        http_response_code(403);
+        exit('Invalid CSRF token');
+    }
+}
+
+// 批量归档
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_ids'])) {
-    $ids = array_map('intval', $_POST['order_ids']);
+    $ids = array_values(array_filter(array_map('intval', $_POST['order_ids'])));
 
-    if (!empty($ids)) {
-        $in = str_repeat('?,', count($ids) - 1) . '?';
+    if (!empty($ids) && (isset($_POST['mark_paid']) || isset($_POST['mark_unpaid']))) {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $status = isset($_POST['mark_paid']) ? 'paid' : 'pending';
+        $stmt = $pdo->prepare("UPDATE orders SET status=? WHERE id IN ($placeholders)");
+        $stmt->execute(array_merge([$status], $ids));
+    }
 
-        if (isset($_POST['delete_selected'])) {
-            $pdo->prepare("DELETE FROM orders WHERE id IN ($in)")->execute($ids);
-        }
+    if (!empty($ids) && isset($_POST['archive_selected'])) {
+        $pdo->beginTransaction();
+        try {
+            $orderStmt = $pdo->prepare('SELECT id, status, stock_released_at FROM orders WHERE id=? FOR UPDATE');
+            $itemStmt = $pdo->prepare('SELECT product_id, quantity FROM order_items WHERE order_id=?');
+            $stockStmt = $pdo->prepare('UPDATE products SET stock=stock+? WHERE id=?');
+            $cancelStmt = $pdo->prepare(
+                "UPDATE orders
+                 SET status='cancelled', stock_released_at=COALESCE(stock_released_at, NOW()), archived_at=NOW()
+                 WHERE id=?"
+            );
+            $archiveStmt = $pdo->prepare('UPDATE orders SET archived_at=NOW() WHERE id=?');
 
-        if (isset($_POST['mark_paid'])) {
-            $pdo->prepare("UPDATE orders SET status='paid' WHERE id IN ($in)")->execute($ids);
-        }
+            foreach ($ids as $id) {
+                $orderStmt->execute([$id]);
+                $order = $orderStmt->fetch();
+                if (!$order) {
+                    continue;
+                }
 
-        if (isset($_POST['mark_unpaid'])) {
-            $pdo->prepare("UPDATE orders SET status='pending' WHERE id IN ($in)")->execute($ids);
+                if ($order['status'] === 'pending' && $order['stock_released_at'] === null) {
+                    $itemStmt->execute([$id]);
+                    foreach ($itemStmt->fetchAll() as $item) {
+                        $stockStmt->execute([(int)$item['quantity'], (int)$item['product_id']]);
+                    }
+                    $cancelStmt->execute([$id]);
+                } else {
+                    $archiveStmt->execute([$id]);
+                }
+            }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Archive orders failed: ' . $e->getMessage());
         }
     }
 
@@ -42,7 +77,7 @@ $offset = ($page - 1) * $limit;
 $search = $_GET['search'] ?? '';
 $month  = $_GET['month'] ?? '';
 
-$where = "WHERE 1=1";
+$where = "WHERE archived_at IS NULL";
 $params = [];
 
 if ($search !== '') {
@@ -278,6 +313,14 @@ foreach ($orders as $order) {
       return confirm("确定要批量删除选中的订单吗？此操作不可恢复！");
     }
 
+    if (submitter && submitter.name === "mark_paid") {
+      return confirm("确定将选中的订单标记为已付款吗？");
+    }
+
+    if (submitter && submitter.name === "mark_unpaid") {
+      return confirm("确定将选中的订单标记为未付款吗？");
+    }
+
     return true;
   }
 </script>
@@ -336,10 +379,11 @@ foreach ($orders as $order) {
   </form>
 
   <form method="post" onsubmit="return confirmBatchAction(event);">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
     <div class="batch-actions">
-      <button type="submit" name="mark_paid" class="btn btn-edit">✅ 批量改已付款</button>
-      <button type="submit" name="mark_unpaid" class="btn btn-move">❌ 批量改未付款</button>
-      <button type="submit" name="delete_selected" value="1" class="btn btn-delete">🗑 批量删除</button>
+      <button type="submit" name="mark_paid" value="1" class="btn btn-edit">标记已付款</button>
+      <button type="submit" name="mark_unpaid" value="1" class="btn btn-move">标记未付款</button>
+      <button type="submit" name="archive_selected" value="1" class="btn btn-delete">归档选中订单</button>
     </div>
 
     <div class="table-wrapper">
@@ -401,7 +445,7 @@ foreach ($orders as $order) {
             </td>
 
             <td>
-              <a href="../receipt.php?order_number=<?= urlencode($o['order_number']) ?>"
+              <a href="../frontend/receipt.php?order_number=<?= urlencode($o['order_number']) ?>&token=admin"
                  target="_blank"
                  class="btn btn-move receipt-btn">
                  🧾 收据
