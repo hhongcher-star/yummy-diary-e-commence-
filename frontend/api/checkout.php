@@ -220,7 +220,7 @@ try {
         'region' => $region,
         'shipping' => $shipping,
         'grand_total' => $grandTotal,
-        'receipt_url' => 'receipt.php?order_number=' . rawurlencode($orderNumber)
+        'receipt_url' => '/receipt?order_number=' . rawurlencode($orderNumber)
             . '&token=' . rawurlencode($accessToken),
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {

@@ -1,19 +1,19 @@
 <header>
   <div class="logo">
-    <a href="/yummy-diary/frontend/index.php">
+    <a href="/">
       <img src="/yummy-diary/images/logo1" alt="Yummy Diary Logo">
     </a>
   </div>
 
   <nav>
-    <a href="/yummy-diary/frontend/index.php">首页 Home</a>
-    <a href="/yummy-diary/frontend/shop.php">商店 Shop</a>
-    <a href="/yummy-diary/frontend/contact.php">联系 Contact</a>
+    <a href="/">首页 Home</a>
+    <a href="/shop">商店 Shop</a>
+    <a href="/contact">联系 Contact</a>
   </nav>
 
   <div class="nav-right">
     <!-- ✅ 搜索改为 /search -->
-    <form class="search-box" action="/yummy-diary/frontend/api/search.php" method="get" style="position:relative;">
+    <form class="search-box" action="/search" method="get" style="position:relative;">
       <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="8"></circle>
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    fetch("/yummy-diary/frontend/api/search_suggest.php?q=" + encodeURIComponent(query))
+    fetch("/api/search-suggest?q=" + encodeURIComponent(query))
       .then(res => res.json())
       .then(data => {
         suggestionsBox.innerHTML = "";
@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
             div.textContent = `[${item.sku}] ${item.name}`;
             div.addEventListener("click", () => {
               searchBox.value = item.name;
-              window.location.href = "/yummy-diary/frontend/api/search.php?q=" + encodeURIComponent(item.name);
+              window.location.href = "/search?q=" + encodeURIComponent(item.name);
             });
             suggestionsBox.appendChild(div);
           });

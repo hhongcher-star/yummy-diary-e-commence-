@@ -388,7 +388,7 @@ th{
 <body>
 
 <div class="header">
-  <a href="shop.php" class="back-btn">
+  <a href="/shop" class="back-btn">
     <i class="fas fa-arrow-left"></i> 返回菜单
   </a>
 
@@ -488,7 +488,7 @@ th{
        rel="noopener noreferrer">
       打开 Instagram 发送付款记录
     </a>
-    <a class="payment-home" href="index.php">
+    <a class="payment-home" href="/">
       <i class="fas fa-home"></i> 回到主页
     </a>
   </div>

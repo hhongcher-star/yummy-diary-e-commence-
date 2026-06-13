@@ -1,5 +1,28 @@
-<FilesMatch "^\.env">
-    Require all denied
-</FilesMatch>
+RewriteEngine On
+DirectoryIndex index.php
 
-Options -Indexes
+# 旧资源路径继续兼容
+RewriteRule ^yummy-diary/(.*)$ /$1 [L]
+
+# 干净网址
+RewriteRule ^shop/?$ frontend/shop.php [L,QSA]
+RewriteRule ^contact/?$ frontend/contact.php [L,QSA]
+RewriteRule ^receipt/?$ frontend/receipt.php [L,QSA]
+RewriteRule ^search/?$ frontend/api/search.php [L,QSA]
+RewriteRule ^api/search-suggest/?$ frontend/api/search_suggest.php [L,QSA]
+
+# 旧页面网址跳转到干净网址
+RewriteCond %{THE_REQUEST} \s/+yummy-diary/frontend/shop\.php [NC]
+RewriteRule ^yummy-diary/frontend/shop\.php$ /shop [R=301,L]
+
+RewriteCond %{THE_REQUEST} \s/+yummy-diary/frontend/contact\.php [NC]
+RewriteRule ^yummy-diary/frontend/contact\.php$ /contact [R=301,L]
+
+RewriteCond %{THE_REQUEST} \s/+yummy-diary/frontend/index\.php [NC]
+RewriteRule ^yummy-diary/frontend/index\.php$ / [R=301,L]
+
+RewriteCond %{THE_REQUEST} \s/+yummy-diary/frontend/receipt\.php [NC]
+RewriteRule ^yummy-diary/frontend/receipt\.php$ /receipt [R=301,L,NE]
+
+RewriteCond %{THE_REQUEST} \s/+yummy-diary/frontend/api/search\.php [NC]
+RewriteRule ^yummy-diary/frontend/api/search\.php$ /search [R=301,L,NE]

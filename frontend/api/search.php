@@ -110,7 +110,7 @@ if ($q !== '') {
     <?php else: ?>
       <div style="text-align:center; padding:20px;">
         <p>❌ 没有找到相关商品。</p>
-        <a href="shop.php" 
+        <a href="/shop"
            style="display:inline-block; margin-top:10px; padding:8px 14px; background:#000; color:#fff; border-radius:6px; text-decoration:none;">
           返回商店 🛒
         </a>
