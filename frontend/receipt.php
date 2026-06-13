@@ -250,6 +250,100 @@ th{
   color:#fff;
 }
 
+.payment-modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:3000;
+  padding:20px;
+  box-sizing:border-box;
+  background:rgba(0,0,0,.55);
+  align-items:center;
+  justify-content:center;
+}
+
+.payment-modal.show{display:flex;}
+
+.payment-card{
+  position:relative;
+  width:min(430px,100%);
+  max-height:90vh;
+  overflow-y:auto;
+  padding:24px;
+  box-sizing:border-box;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 18px 60px rgba(0,0,0,.25);
+}
+
+.payment-card h3{margin:0 40px 12px;font-size:18px;}
+.payment-card p{margin:0 0 14px;line-height:1.6;}
+.payment-card img{display:block;width:100%;height:auto;border-radius:12px;cursor:zoom-in;}
+
+.payment-close{
+  position:absolute;
+  top:12px;
+  right:12px;
+  width:38px;
+  height:38px;
+  border:0;
+  border-radius:50%;
+  background:#f3f3f3;
+  font-size:22px;
+  cursor:pointer;
+}
+
+.payment-instagram{
+  display:block;
+  margin-top:16px;
+  padding:12px 16px;
+  border-radius:12px;
+  background:#111;
+  color:#fff;
+  font-weight:700;
+  text-decoration:none;
+}
+
+.payment-home{
+  display:block;
+  margin-top:10px;
+  padding:11px 16px;
+  border:2px solid #111;
+  border-radius:12px;
+  color:#111;
+  font-weight:700;
+  text-decoration:none;
+}
+
+.image-preview{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:4000;
+  padding:18px;
+  box-sizing:border-box;
+  background:rgba(0,0,0,.9);
+  align-items:center;
+  justify-content:center;
+}
+
+.image-preview.show{display:flex;}
+.image-preview img{max-width:96vw;max-height:92vh;object-fit:contain;cursor:zoom-out;}
+
+.preview-close{
+  position:fixed;
+  top:16px;
+  right:16px;
+  width:42px;
+  height:42px;
+  border:0;
+  border-radius:50%;
+  background:#fff;
+  color:#111;
+  font-size:24px;
+  cursor:pointer;
+}
+
 @media(max-width:768px){
   .header img{
     width:70px;
@@ -367,9 +461,9 @@ th{
   </div>
 
   <div class="btn-row">
-    <a href="index.php" class="btn-short">
-      <i class="fas fa-check"></i> <strong>完成</strong>
-    </a>
+    <button type="button" id="openPayment" class="btn-short">
+      <i class="fas fa-credit-card"></i> <strong>付款</strong>
+    </button>
 
     <button id="downloadPdf" class="btn-short">
       <i class="fas fa-file-pdf"></i> PDF
@@ -377,10 +471,69 @@ th{
   </div>
 </div>
 
+<div id="paymentModal" class="payment-modal" role="dialog" aria-modal="true" aria-labelledby="paymentTitle">
+  <div class="payment-card">
+    <button type="button" id="closePayment" class="payment-close" aria-label="关闭">&times;</button>
+    <h3 id="paymentTitle">付款</h3>
+    <p>
+      请把付款记录发给
+      <a href="https://www.instagram.com/itszweii__?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw=="
+         target="_blank"
+         rel="noopener noreferrer">@itszweii__</a>
+    </p>
+    <img id="paymentImage" src="/yummy-diary/images/payment-qr.png" alt="Touch 'n Go 付款二维码">
+    <a class="payment-instagram"
+       href="https://www.instagram.com/itszweii__?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw=="
+       target="_blank"
+       rel="noopener noreferrer">
+      打开 Instagram 发送付款记录
+    </a>
+    <a class="payment-home" href="index.php">
+      <i class="fas fa-home"></i> 回到主页
+    </a>
+  </div>
+</div>
+
+<div id="imagePreview" class="image-preview" role="dialog" aria-modal="true" aria-label="付款图片放大预览">
+  <button type="button" id="closePreview" class="preview-close" aria-label="关闭">&times;</button>
+  <img src="/yummy-diary/images/payment-qr.png" alt="放大的 Touch 'n Go 付款二维码">
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <script>
+const paymentModal = document.getElementById("paymentModal");
+const imagePreview = document.getElementById("imagePreview");
+
+document.getElementById("openPayment").addEventListener("click", () => {
+  paymentModal.classList.add("show");
+  document.body.style.overflow = "hidden";
+});
+
+function closePaymentModal(){
+  paymentModal.classList.remove("show");
+  document.body.style.overflow = "";
+}
+
+document.getElementById("closePayment").addEventListener("click", closePaymentModal);
+paymentModal.addEventListener("click", event => {
+  if(event.target === paymentModal) closePaymentModal();
+});
+
+document.getElementById("paymentImage").addEventListener("click", () => {
+  imagePreview.classList.add("show");
+});
+
+function closeImagePreview(){
+  imagePreview.classList.remove("show");
+}
+
+document.getElementById("closePreview").addEventListener("click", closeImagePreview);
+imagePreview.addEventListener("click", event => {
+  if(event.target === imagePreview || event.target.tagName === "IMG") closeImagePreview();
+});
+
 document.getElementById("downloadPdf").addEventListener("click", () => {
   const { jsPDF } = window.jspdf;
   const receipt = document.getElementById("receipt");

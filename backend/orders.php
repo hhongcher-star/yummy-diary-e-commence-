@@ -14,6 +14,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // 批量归档
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_payment_id'])) {
+    $orderId = (int)$_POST['toggle_payment_id'];
+
+    if ($orderId > 0) {
+        $stmt = $pdo->prepare(
+            "UPDATE orders
+             SET status = CASE WHEN status = 'paid' THEN 'pending' ELSE 'paid' END
+             WHERE id = ? AND archived_at IS NULL"
+        );
+        $stmt->execute([$orderId]);
+    }
+
+    $query = http_build_query([
+        'page' => max(1, (int)($_POST['current_page'] ?? 1)),
+        'search' => (string)($_POST['current_search'] ?? ''),
+        'month' => (string)($_POST['current_month'] ?? ''),
+    ]);
+    header('Location: orders.php?' . $query);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_ids'])) {
     $ids = array_values(array_filter(array_map('intval', $_POST['order_ids'])));
 
@@ -216,6 +237,7 @@ foreach ($orders as $order) {
     font-weight:800;
     font-size:13px;
     white-space:nowrap;
+    cursor:pointer;
   }
 
   .status-paid{
@@ -299,6 +321,12 @@ foreach ($orders as $order) {
   }
 
   function confirmBatchAction(event) {
+    const submitter = event.submitter;
+
+    if (submitter && submitter.name === "toggle_payment_id") {
+      return true;
+    }
+
     const selected = document.querySelectorAll("input[name='order_ids[]']:checked");
 
     if (selected.length === 0) {
@@ -306,8 +334,6 @@ foreach ($orders as $order) {
       event.preventDefault();
       return false;
     }
-
-    const submitter = event.submitter;
 
     if (submitter && submitter.name === "delete_selected") {
       return confirm("确定要批量删除选中的订单吗？此操作不可恢复！");
@@ -380,6 +406,9 @@ foreach ($orders as $order) {
 
   <form method="post" onsubmit="return confirmBatchAction(event);">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+    <input type="hidden" name="current_page" value="<?= $page ?>">
+    <input type="hidden" name="current_search" value="<?= htmlspecialchars($search) ?>">
+    <input type="hidden" name="current_month" value="<?= htmlspecialchars($month) ?>">
     <div class="batch-actions">
       <button type="submit" name="mark_paid" value="1" class="btn btn-edit">标记已付款</button>
       <button type="submit" name="mark_unpaid" value="1" class="btn btn-move">标记未付款</button>
@@ -438,9 +467,21 @@ foreach ($orders as $order) {
 
             <td>
               <?php if ($o['status'] === 'paid'): ?>
-                <span class="status-badge status-paid">✅ 已付款</span>
+                <button type="submit"
+                        name="toggle_payment_id"
+                        value="<?= (int)$o['id'] ?>"
+                        class="status-badge status-paid"
+                        onclick="return confirm('确定改为未付款吗？')">
+                  ✅ 已付款
+                </button>
               <?php else: ?>
-                <span class="status-badge status-pending">❌ 未付款</span>
+                <button type="submit"
+                        name="toggle_payment_id"
+                        value="<?= (int)$o['id'] ?>"
+                        class="status-badge status-pending"
+                        onclick="return confirm('确定改为已付款吗？')">
+                  ❌ 未付款
+                </button>
               <?php endif; ?>
             </td>
 
