@@ -634,7 +634,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
       data.append('ordered_ids', JSON.stringify(ids));
 
       try {
-        const response = await fetch('/yummy-diary/backend/product_sort.php', {method:'POST', body:data});
+        const response = await fetch('/backend/product_sort.php', {method:'POST', body:data});
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.message || '保存失败');
         window.sortOrderDirty = false;
