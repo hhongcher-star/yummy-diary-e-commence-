@@ -107,13 +107,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $target = $targetDir . $filename;
 
             if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
-                // 删除旧图片
-                $oldImage = __DIR__ . "/../" . ltrim($p['image_url'], "/");
-
-                if ($p['image_url'] && file_exists($oldImage)) {
-                    unlink($oldImage);
-                }
-
                 $image_url = "frontend/uploads/" . $filename;
             }
         }
@@ -142,24 +135,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pdo->prepare('UPDATE products SET parent_product_id=NULL WHERE parent_product_id=?')->execute([$id]);
     $pdo->prepare('DELETE FROM product_variants WHERE product_id=?')->execute([$id]);
     if ($productType === 'grouped') {
+        $variantNames = $_POST['variant_name'] ?? [];
+        if (count($variantNames) === 0) {
+            throw new RuntimeException('分类商品至少需要一个分类项目。');
+        }
         $insertVariant = $pdo->prepare('INSERT INTO product_variants
           (product_id,variant_name,sku,price,stock,image_url,sort_order) VALUES (?,?,?,?,?,?,?)');
-        foreach (($_POST['variant_name'] ?? []) as $index => $variantName) {
+        foreach ($variantNames as $index => $variantName) {
             $variantName = trim($variantName);
             $sourceId = (int)($_POST['source_product_id'][$index] ?? 0);
-            if ($variantName === '') continue;
+            if ($variantName === '') {
+                throw new RuntimeException('分类项目名称不能为空。');
+            }
             $source = null;
             if ($sourceId > 0) {
                 $sourceStmt = $pdo->prepare("SELECT sku,price,stock,image_url FROM products WHERE id=? AND product_type='single'");
                 $sourceStmt->execute([$sourceId]);
                 $source = $sourceStmt->fetch();
-                if (!$source) continue;
+                if (!$source) {
+                    throw new RuntimeException('分类项目来源商品不存在，请刷新页面后重试。');
+                }
                 $pdo->prepare('DELETE FROM product_variants WHERE source_product_id=?')->execute([$sourceId]);
             }
-            $variantSku = trim($_POST['variant_sku'][$index] ?? '');
-            $variantPrice = (float)($_POST['variant_price'][$index] ?? 0);
-            $variantStock = max(0, (int)($_POST['variant_stock'][$index] ?? 0));
-            $variantImage = trim($_POST['existing_variant_image'][$index] ?? '');
+            $variantSku = trim($_POST['variant_sku'][$index] ?? '') ?: (string)($source['sku'] ?? '');
+            $variantPrice = isset($_POST['variant_price'][$index]) && $_POST['variant_price'][$index] !== ''
+                ? (float)$_POST['variant_price'][$index]
+                : (float)($source['price'] ?? 0);
+            $variantStock = isset($_POST['variant_stock'][$index]) && $_POST['variant_stock'][$index] !== ''
+                ? max(0, (int)$_POST['variant_stock'][$index])
+                : max(0, (int)($source['stock'] ?? 0));
+            $variantImage = trim($_POST['existing_variant_image'][$index] ?? '') ?: (string)($source['image_url'] ?? '');
             if (isset($_FILES['variant_image']['error'][$index]) && $_FILES['variant_image']['error'][$index] === UPLOAD_ERR_OK) {
                 $allowed = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'];
                 $tmp = $_FILES['variant_image']['tmp_name'][$index];
@@ -173,7 +178,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $insertVariant = $pdo->prepare('INSERT INTO product_variants
               (product_id,source_product_id,variant_name,sku,price,stock,image_url,sort_order) VALUES (?,?,?,?,?,?,?,?)');
-            if ($variantSku === '') continue;
+            if ($variantSku === '') {
+                throw new RuntimeException('分类项目 SKU 不能为空。');
+            }
             $insertVariant->execute([$id,$sourceId ?: null,$variantName,$variantSku,$variantPrice,$variantStock,$variantImage ?: null,$index+1]);
             if ($sourceId > 0) {
                 $pdo->prepare('UPDATE products SET name=?,sku=?,price=?,stock=?,image_url=?,parent_product_id=? WHERE id=?')
@@ -615,6 +622,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <script>
 const variantFields=document.getElementById('variantFields');
 const variantList=document.getElementById('variantList');
+const editForm=document.querySelector('form.admin-card');
+editForm.addEventListener('submit',()=>{
+  variantList.querySelectorAll('.variant-row').forEach((row,index)=>{
+    const file=row.querySelector('input[type="file"][name^="variant_image"]');
+    if(file)file.name=`variant_image[${index}]`;
+  });
+});
 function bindRemove(row){row.querySelector('.remove-variant').onclick=()=>row.remove();}
 function bindImagePreview(row){
   const fileInput=row.querySelector('input[type="file"][name="variant_image[]"]');

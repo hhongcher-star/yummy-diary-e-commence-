@@ -69,26 +69,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $insert->execute([$sku,$name,$type,null,null,$price,$stock,$category,uploadProductImage('image'),$sortStmt->fetchColumn(),isset($_POST['is_hot'])?1:0]);
             $productId = (int)$pdo->lastInsertId();
             if ($type === 'grouped') {
+                $variantNames = $_POST['variant_name'] ?? [];
+                if (count($variantNames) === 0) {
+                    throw new RuntimeException('分类商品至少需要一个分类项目。');
+                }
                 $variantStmt = $pdo->prepare('INSERT INTO product_variants
                   (product_id,source_product_id,variant_name,sku,price,stock,image_url,sort_order)
                   VALUES (?,?,?,?,?,?,?,?)');
-                foreach (($_POST['variant_name'] ?? []) as $index => $variantName) {
+                foreach ($variantNames as $index => $variantName) {
                     $variantName = trim($variantName);
                     $sourceId = (int)($_POST['source_product_id'][$index] ?? 0);
-                    if ($variantName === '') continue;
+                    if ($variantName === '') {
+                        throw new RuntimeException('分类项目名称不能为空。');
+                    }
                     $source = null;
                     if ($sourceId > 0) {
                         $sourceStmt = $pdo->prepare("SELECT sku,price,stock,image_url FROM products WHERE id=? AND product_type='single'");
                         $sourceStmt->execute([$sourceId]);
                         $source = $sourceStmt->fetch();
-                        if (!$source) continue;
+                        if (!$source) {
+                            throw new RuntimeException('分类项目来源商品不存在，请刷新页面后重试。');
+                        }
                         $pdo->prepare('DELETE FROM product_variants WHERE source_product_id=?')->execute([$sourceId]);
                     }
                     $variantSku = trim($_POST['variant_sku'][$index] ?? '') ?: ($source['sku'] ?? '');
                     $variantPrice = isset($_POST['variant_price'][$index]) ? (float)$_POST['variant_price'][$index] : (float)($source['price'] ?? 0);
                     $variantStock = isset($_POST['variant_stock'][$index]) ? max(0, (int)$_POST['variant_stock'][$index]) : (int)($source['stock'] ?? 0);
                     $variantImage = uploadProductImage('variant_image', $index) ?: ($source['image_url'] ?? null);
-                    if ($variantSku === '') continue;
+                    if ($variantSku === '') {
+                        throw new RuntimeException('分类项目 SKU 不能为空。');
+                    }
                     $variantStmt->execute([
                         $productId,
                         $sourceId ?: null,
@@ -139,6 +149,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div id="productPicker" class="product-picker"><div class="picker-card"><div class="picker-head"><div><h3>选择现有商品</h3><p>点击商品卡片即可加入，商品会从原来的分类商品移动到这里。</p></div><button type="button" class="picker-close">×</button></div><input id="pickerSearch" type="search" placeholder="搜索名称或 SKU"><div class="picker-grid"><?php foreach($availableSingles as $single): ?><button type="button" class="picker-product" data-search="<?= htmlspecialchars(strtolower($single['name'].' '.$single['sku'])) ?>" data-id="<?= (int)$single['id'] ?>" data-name="<?= htmlspecialchars($single['name'],ENT_QUOTES) ?>" data-sku="<?= htmlspecialchars($single['sku'],ENT_QUOTES) ?>" data-price="<?= htmlspecialchars($single['price'],ENT_QUOTES) ?>" data-stock="<?= (int)$single['stock'] ?>"><img src="/yummy-diary/<?= htmlspecialchars($single['image_url'] ?: 'images/soldout.png') ?>"><span><strong><?= htmlspecialchars($single['name']) ?></strong><small><?= htmlspecialchars($single['sku']) ?> · RM <?= number_format((float)$single['price'],2) ?> · 库存 <?= (int)$single['stock'] ?></small><?php if($single['parent_name']): ?><small>目前属于：<?= htmlspecialchars($single['parent_name']) ?></small><?php endif; ?></span></button><?php endforeach; ?></div></div></div>
 </main><script>
 const fields=document.getElementById('variantFields'),list=document.getElementById('variantList');
+const addForm=document.querySelector('form.admin-card');
+addForm.addEventListener('submit',()=>{
+  list.querySelectorAll('.variant-row').forEach((row,index)=>{
+    const file=row.querySelector('input[type="file"][name^="variant_image"]');
+    if(file)file.name=`variant_image[${index}]`;
+  });
+});
 const singleOptions=<?= json_encode($availableSingles, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 function bindVariantImage(row){const file=row.querySelector('input[type="file"][name="variant_image[]"]');const img=row.querySelector('.variant-photo');if(!file||!img)return;file.onchange=()=>{const f=file.files[0];if(f)img.src=URL.createObjectURL(f);};}
 function addVariant(product=null){const row=document.createElement('div');row.className='variant-row'+(product?' variant-existing':'');row.innerHTML=product?`<input name="variant_name[]" placeholder="分类名称" required value="${product.name}"><input type="hidden" name="source_product_id[]" value="${product.id}"><input type="hidden" name="variant_sku[]" value=""><input type="hidden" name="variant_price[]" value=""><input type="hidden" name="variant_stock[]" value=""><input type="file" name="variant_image[]" hidden><div><strong>${product.sku}</strong><br><span>RM ${product.price} · 库存 ${product.stock}</span></div><button type="button" class="remove-variant">删除</button>`:`<input name="variant_name[]" placeholder="分类名称" required><input type="hidden" name="source_product_id[]" value=""><input name="variant_sku[]" placeholder="SKU" required><input type="number" step=".01" min="0" name="variant_price[]" placeholder="价格 RM" required><input type="number" min="0" name="variant_stock[]" placeholder="库存" required><img class="variant-photo" src="/yummy-diary/images/soldout.png">

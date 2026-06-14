@@ -23,9 +23,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_order'])) {
 
     $orderedIds = array_values(array_unique(array_map('intval', $orderedIds)));
     if ($isHot) {
-        $check = $pdo->query('SELECT id FROM products WHERE is_hot=1 ORDER BY hot_order ASC, id ASC');
+        $check = $pdo->query(
+            'SELECT id FROM products
+             WHERE is_hot=1 AND parent_product_id IS NULL
+             ORDER BY hot_order ASC, id ASC'
+        );
     } else {
-        $check = $pdo->prepare('SELECT id FROM products WHERE category=? ORDER BY sort_order ASC, id ASC');
+        $check = $pdo->prepare(
+            'SELECT id FROM products
+             WHERE category=? AND parent_product_id IS NULL
+             ORDER BY sort_order ASC, id ASC'
+        );
         $check->execute([$category]);
     }
     $databaseIds = array_map('intval', $check->fetchAll(PDO::FETCH_COLUMN));
@@ -43,12 +51,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_order'])) {
     $pdo->beginTransaction();
     try {
         if ($isHot) {
-            $update = $pdo->prepare('UPDATE products SET hot_order=? WHERE id=? AND is_hot=1');
+            $update = $pdo->prepare(
+                'UPDATE products SET hot_order=?
+                 WHERE id=? AND is_hot=1 AND parent_product_id IS NULL'
+            );
             foreach ($orderedIds as $index => $productId) {
                 $update->execute([$index + 1, $productId]);
             }
         } else {
-            $update = $pdo->prepare('UPDATE products SET sort_order=? WHERE id=? AND category=?');
+            $update = $pdo->prepare(
+                'UPDATE products SET sort_order=?
+                 WHERE id=? AND category=? AND parent_product_id IS NULL'
+            );
             foreach ($orderedIds as $index => $productId) {
                 $update->execute([$index + 1, $productId, $category]);
             }
