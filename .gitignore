@@ -1,3 +1,7 @@
 .env
 .env.*
 !.env.example
+
+# Runtime product uploads must persist independently from deployments.
+frontend/uploads/*
+!frontend/uploads/.gitkeep

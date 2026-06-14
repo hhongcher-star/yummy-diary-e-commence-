@@ -396,8 +396,8 @@ $msg = $_GET['msg'] ?? '';
 
           <td>
             <?php if(!empty($p['image_url'])): ?>
-              <img src="/yummy-diary/<?= htmlspecialchars($p['image_url']) ?>"
-                   onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';"
+              <img src="<?= htmlspecialchars(productImageUrl($p['image_url']), ENT_QUOTES) ?>"
+                   onerror="this.remove();"
                    class="thumb">
             <?php else: ?>
               <span class="empty-image">No Image</span>
@@ -464,7 +464,7 @@ $msg = $_GET['msg'] ?? '';
           <tr class="variant-inventory-row">
             <td>↳ <?= (int)$variant['id'] ?></td>
             <td><?= htmlspecialchars($variant['sku']) ?></td>
-            <td><img src="/yummy-diary/<?= htmlspecialchars($variant['image_url'] ?: 'images/soldout.png') ?>" class="thumb" onerror="this.src='/yummy-diary/images/soldout.png'"></td>
+            <td><?php if(!empty($variant['image_url'])): ?><img src="<?= htmlspecialchars(productImageUrl($variant['image_url']), ENT_QUOTES) ?>" class="thumb" onerror="this.remove();"><?php endif; ?></td>
             <td class="inventory-name"><?= htmlspecialchars($variant['variant_name']) ?><br><small>分类项目</small><?php if($variantLow): ?><br><span class="low-badge">库存不足</span><?php endif; ?></td>
             <td><span class="inventory-category">属于：<?= htmlspecialchars($p['name']) ?></span></td>
             <td><form method="post" class="stock-form"><input type="hidden" name="id" value="<?= (int)$variant['id'] ?>"><input type="hidden" name="target_type" value="variant"><input type="number" name="stock" value="<?= (int)$variant['stock'] ?>" class="<?= $variantLow?'stock-low':'stock-ok' ?>"><button class="btn btn-edit">更新</button></form></td>

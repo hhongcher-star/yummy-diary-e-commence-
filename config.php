@@ -48,6 +48,20 @@ function appUrl(string $path = ''): string
     return ($basePath !== '' ? $basePath : '') . '/' . $path;
 }
 
+function productImageUrl(?string $value): string
+{
+    $path = trim(str_replace('\\', '/', (string)$value));
+    $path = preg_replace('#^https?://[^/]+/#i', '', $path);
+    $path = preg_replace('#^/?(?:store/)?yummy-diary/#i', '', $path);
+    $path = ltrim($path, '/');
+
+    if (str_starts_with($path, 'uploads/')) {
+        $path = 'frontend/' . $path;
+    }
+
+    return appUrl($path !== '' ? $path : 'images/soldout.png');
+}
+
 $appEnvironment = getenv('APP_ENV') ?: 'production';
 ini_set('display_errors', $appEnvironment === 'development' ? '1' : '0');
 ini_set('display_startup_errors', $appEnvironment === 'development' ? '1' : '0');

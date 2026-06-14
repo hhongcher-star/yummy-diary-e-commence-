@@ -723,7 +723,7 @@ $openSort = $_GET['open_sort'] ?? '';
       <tr>
         <td><?= $p['id'] ?></td>
         <td><?= htmlspecialchars($p['sku']) ?></td>
-        <td><?php if($p['image_url']): ?><img src="/yummy-diary/<?= htmlspecialchars($p['image_url']) ?>" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" class="thumb"><?php endif; ?></td>
+        <td><?php if($p['image_url']): ?><img src="<?= htmlspecialchars(productImageUrl($p['image_url']), ENT_QUOTES) ?>" onerror="this.remove();" class="thumb"><?php endif; ?></td>
         <td>
           <?= htmlspecialchars($p['name']) ?>
           <br><small><strong><?= ($p['product_type'] ?? 'single') === 'grouped' ? '分类商品' : '单商品' ?></strong></small>
@@ -771,7 +771,7 @@ $openSort = $_GET['open_sort'] ?? '';
         <td colspan="8">
           <?php foreach($childrenByParent[(int)$p['id']] ?? [] as $child): ?>
             <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;border-bottom:1px solid #eee;">
-              <img src="/yummy-diary/<?= htmlspecialchars($child['image_url'] ?: 'images/soldout.png') ?>" style="width:52px;height:52px;object-fit:cover;border-radius:10px;">
+              <?php if(!empty($child['image_url'])): ?><img src="<?= htmlspecialchars(productImageUrl($child['image_url']), ENT_QUOTES) ?>" onerror="this.remove();" style="width:52px;height:52px;object-fit:cover;border-radius:10px;"><?php endif; ?>
               <strong><?= htmlspecialchars($child['name']) ?></strong>
               <span><?= htmlspecialchars($child['sku']) ?></span>
               <span>RM <?= number_format((float)$child['price'],2) ?></span>

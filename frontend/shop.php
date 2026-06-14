@@ -261,6 +261,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
     .variant-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;}
     .variant-option{min-height:44px;padding:10px 12px;border:1px solid #ddd;border-radius:12px;background:#fff;color:#333;cursor:pointer;}
     .variant-option.selected{border-color:#111;box-shadow:inset 0 0 0 1px #111;font-weight:800;}
+    .variant-pagination{display:none;grid-template-columns:44px 1fr 44px;align-items:center;gap:10px;margin-top:12px;}
+    .variant-pagination.show{display:grid;}
+    .variant-page-button{height:38px;border:1px solid #ddd;border-radius:10px;background:#fff;font-size:20px;cursor:pointer;}
+    .variant-page-button:disabled{color:#bbb;background:#f7f7f7;cursor:not-allowed;}
+    .variant-page-status{text-align:center;color:#777;font-size:13px;font-weight:700;}
     .variant-quantity{display:flex;align-items:center;justify-content:space-between;border:1px solid #ddd;border-radius:14px;padding:5px 8px;}
     .variant-quantity button{width:42px;height:36px;border:0;background:#fff;font-size:20px;cursor:pointer;}
     .variant-add{position:sticky;bottom:0;width:100%;height:52px;margin-top:22px;border:0;border-radius:15px;background:#111;color:#fff;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 -10px 30px #fff;}
@@ -282,7 +287,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
     .sort-save-state.dirty{color:#b36b00;}
     .sort-save-state.success{color:#267a43;}
 @media (max-width: 768px) {
-  .variant-panel{top:auto;bottom:0;width:100%;height:auto;max-height:88vh;padding-top:58px;border-radius:24px 24px 0 0;overflow:visible;animation:variantRise .24s ease;}
+  .variant-panel{top:auto;bottom:0;width:100%;height:auto;max-height:88vh;padding-top:58px;border-radius:24px 24px 0 0;overflow-y:auto;animation:variantRise .24s ease;}
   .variant-decoration{top:-78px;width:150px;height:150px;}
   @keyframes variantRise{from{transform:translateY(100%)}to{transform:translateY(0)}}
   .shop-layout {
@@ -451,7 +456,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
                     <?php if ($displayStock <= 0): ?>
                       <div class="soldout-tag">SOLD OUT</div>
                     <?php endif; ?>
-                    <img src="/yummy-diary/<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
+                    <?php if (!empty($p['image_url'])): ?>
+                      <img src="<?= htmlspecialchars(productImageUrl($p['image_url']), ENT_QUOTES) ?>" onerror="this.remove();" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
+                    <?php endif; ?>
                     <div class="product-text">
                       <h4><?= htmlspecialchars($p['name'], ENT_QUOTES) ?></h4>
                       <?php if (!empty($p['sku'])): ?>
@@ -731,7 +738,15 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
           <p id="variantPrice" class="variant-price"></p>
         </div>
       </div>
-      <div class="variant-section"><h4>分类选择</h4><div id="flavorOptions" class="variant-options"></div></div>
+      <div class="variant-section">
+        <h4>分类选择</h4>
+        <div id="flavorOptions" class="variant-options"></div>
+        <div id="variantPagination" class="variant-pagination" aria-label="分类分页">
+          <button type="button" id="variantPrevPage" class="variant-page-button" aria-label="上一页">‹</button>
+          <span id="variantPageStatus" class="variant-page-status"></span>
+          <button type="button" id="variantNextPage" class="variant-page-button" aria-label="下一页">›</button>
+        </div>
+      </div>
       <div class="variant-section">
         <h4>数量</h4>
         <div class="variant-quantity">
@@ -747,9 +762,14 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
   document.addEventListener("DOMContentLoaded", () => {
     const modal = document.getElementById("variantModal");
     const flavorBox = document.getElementById("flavorOptions");
+    const pagination = document.getElementById("variantPagination");
+    const previousPageButton = document.getElementById("variantPrevPage");
+    const nextPageButton = document.getElementById("variantNextPage");
+    const pageStatus = document.getElementById("variantPageStatus");
     const qtyText = document.getElementById("variantQty");
     const addButton = document.getElementById("variantAdd");
-    let products = [], selected = null, flavor = "", qty = 1;
+    const variantsPerPage = 6;
+    let products = [], selected = null, flavor = "", qty = 1, variantPage = 0;
 
     function storefrontImageUrl(value) {
       let path = String(value || "").replaceAll("\\", "/").trim();
@@ -761,7 +781,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
         path = "frontend/" + path;
       }
 
-      return "/" + (path || "images/soldout.png");
+      return <?= json_encode(appUrl()) ?> + (path || "images/soldout.png");
     }
 
     function parse(button) {
@@ -805,7 +825,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
       const variantImage = document.getElementById("variantImage");
       variantImage.onerror = () => {
         variantImage.onerror = null;
-        variantImage.src = "/images/soldout.png";
+        variantImage.src = <?= json_encode(productImageUrl(null)) ?>;
       };
       variantImage.src = storefrontImageUrl(imageUrl);
       addButton.disabled = available <= 0;
@@ -814,7 +834,14 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
     function render() {
       const configured = products[0]?.button.dataset.productType === "grouped";
       const flavors = configured ? products[0].variants.map(item => item.variant_name) : [products[0].flavor];
-      flavorBox.innerHTML = flavors.map(value => `<button type="button" class="variant-option${value === flavor ? " selected" : ""}" data-flavor="${escapeHtml(value)}">${escapeHtml(value)}</button>`).join("");
+      const pageCount = Math.max(1, Math.ceil(flavors.length / variantsPerPage));
+      variantPage = Math.min(Math.max(variantPage, 0), pageCount - 1);
+      const visibleFlavors = flavors.slice(variantPage * variantsPerPage, (variantPage + 1) * variantsPerPage);
+      flavorBox.innerHTML = visibleFlavors.map(value => `<button type="button" class="variant-option${value === flavor ? " selected" : ""}" data-flavor="${escapeHtml(value)}">${escapeHtml(value)}</button>`).join("");
+      pagination.classList.toggle("show", pageCount > 1);
+      pageStatus.textContent = `${variantPage + 1} / ${pageCount}`;
+      previousPageButton.disabled = variantPage === 0;
+      nextPageButton.disabled = variantPage >= pageCount - 1;
       selected = products[0];
       selected.variant = configured ? selected.variants.find(item => item.variant_name === flavor) : null;
       details();
@@ -824,7 +851,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
       products = button.dataset.productType === "grouped"
         ? [current]
         : [current];
-      flavor = current.flavor; qty = 1;
+      flavor = current.flavor; qty = 1; variantPage = 0;
       render();
       document.getElementById("flavorOptions").closest(".variant-section").style.display = button.dataset.productType === "grouped" ? "" : "none";
       modal.classList.add("show");
@@ -848,6 +875,14 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
       flavor = option.dataset.flavor;
       render();
     });
+    previousPageButton.onclick = () => {
+      variantPage = Math.max(0, variantPage - 1);
+      render();
+    };
+    nextPageButton.onclick = () => {
+      variantPage += 1;
+      render();
+    };
     document.getElementById("variantMinus").onclick = () => { qty = Math.max(1, qty - 1); details(); };
     document.getElementById("variantPlus").onclick = () => {
       const sku = selected.variant?.sku || selected.button.dataset.sku;
