@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    fetch("/api/search-suggest?q=" + encodeURIComponent(query))
+    fetch("api/search-suggest?q=" + encodeURIComponent(query))
       .then(res => res.json())
       .then(data => {
         suggestionsBox.innerHTML = "";
@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
             div.textContent = `[${item.sku}] ${item.name}`;
             div.addEventListener("click", () => {
               searchBox.value = item.name;
-              window.location.href = "/search?q=" + encodeURIComponent(item.name);
+              window.location.href = "search?q=" + encodeURIComponent(item.name);
             });
             suggestionsBox.appendChild(div);
           });

@@ -49,8 +49,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_ids'])) {
         $pdo->beginTransaction();
         try {
             $orderStmt = $pdo->prepare('SELECT id, status, stock_released_at FROM orders WHERE id=? FOR UPDATE');
-            $itemStmt = $pdo->prepare('SELECT product_id, quantity FROM order_items WHERE order_id=?');
+            $itemStmt = $pdo->prepare('SELECT product_id, sku, quantity FROM order_items WHERE order_id=?');
             $stockStmt = $pdo->prepare('UPDATE products SET stock=stock+? WHERE id=?');
+            $variantStockStmt = $pdo->prepare(
+                'UPDATE product_variants SET stock=stock+? WHERE product_id=? AND sku=?'
+            );
             $cancelStmt = $pdo->prepare(
                 "UPDATE orders
                  SET status='cancelled', stock_released_at=COALESCE(stock_released_at, NOW()), archived_at=NOW()
@@ -68,7 +71,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_ids'])) {
                 if ($order['status'] === 'pending' && $order['stock_released_at'] === null) {
                     $itemStmt->execute([$id]);
                     foreach ($itemStmt->fetchAll() as $item) {
-                        $stockStmt->execute([(int)$item['quantity'], (int)$item['product_id']]);
+                        $variantStockStmt->execute([
+                            (int)$item['quantity'],
+                            (int)$item['product_id'],
+                            (string)$item['sku'],
+                        ]);
+                        if ($variantStockStmt->rowCount() === 0) {
+                            $stockStmt->execute([(int)$item['quantity'], (int)$item['product_id']]);
+                        }
                     }
                     $cancelStmt->execute([$id]);
                 } else {

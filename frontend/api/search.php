@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
       formData.append("price", btn.dataset.price);
       formData.append("img", btn.dataset.img);
 
-      fetch("/frontend/api/add_to_cart.php", { method:"POST", body:formData })
+      fetch("frontend/api/add_to_cart.php", { method:"POST", body:formData })
         .then(res=>res.json())
         .then(data => {
           if(data.success && typeof updateCartUI === "function") {
