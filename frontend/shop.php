@@ -698,7 +698,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
         formData.append("price", btn.dataset.price);
         formData.append("img", btn.dataset.img);
 
-        fetch("api/add_to_cart.php", { method: "POST", body: formData })
+        fetch("/frontend/api/add_to_cart.php", { method: "POST", body: formData })
         .then(res => res.json())
         .then(data => {
           if (data.success && typeof updateCartUI === "function") {
@@ -863,7 +863,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
           if (selected.button.dataset.productType === "grouped") {
             data.append("variant_id", selected.variant?.id || "");
           }
-          const response = await fetch("api/add_to_cart.php", {method:"POST", body:data});
+          const response = await fetch("/frontend/api/add_to_cart.php", {method:"POST", body:data});
           const result = await response.json();
           if (!result.success) throw new Error(result.message || "加入购物袋失败");
           window.cartData = result;

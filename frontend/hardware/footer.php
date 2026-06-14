@@ -417,7 +417,7 @@ body::after{
 
 function getCartAndUpdate(){
 
-  return fetch("api/add_to_cart.php?mode=getCart")
+  return fetch("/frontend/api/add_to_cart.php?mode=getCart")
     .then(res=>res.json())
     .then(data=>{
 
@@ -795,8 +795,8 @@ document.addEventListener("DOMContentLoaded",()=>{
         fd.append("img",t.dataset.img);
 
         const url=t.classList.contains("dec")
-          ? "api/add_to_cart.php?mode=removeOne"
-          : "api/add_to_cart.php";
+          ? "/frontend/api/add_to_cart.php?mode=removeOne"
+          : "/frontend/api/add_to_cart.php";
 
         fetch(url,{
           method:"POST",
@@ -811,7 +811,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("clearCartBtn")
     .addEventListener("click",()=>{
 
-      fetch("api/add_to_cart.php?mode=clear")
+      fetch("/frontend/api/add_to_cart.php?mode=clear")
         .then(r=>r.json())
         .then(d=>updateCartUI(d));
     });
