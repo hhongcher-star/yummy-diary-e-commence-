@@ -54,6 +54,7 @@ $availableStmt = $pdo->prepare("SELECT p.id,p.sku,p.name,p.price,p.stock,p.image
   WHERE p.product_type='single' AND p.id<>? ORDER BY p.name,p.sku");
 $availableStmt->execute([$id]);
 $availableSingles = $availableStmt->fetchAll(PDO::FETCH_ASSOC);
+$error = '';
 
 // ====================
 // 更新保存
@@ -88,37 +89,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $category = array_key_first($categories);
     }
 
+    try {
     $image_url = $p['image_url'];
 
     // 图片上传处理
-    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        $allowed = ['image/jpeg','image/png','image/gif'];
-
-        if (in_array($_FILES['image']['type'], $allowed) && $_FILES['image']['size'] <= 2 * 1024 * 1024) {
-            $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
-            $filename = uniqid() . "." . $ext;
-
-            $targetDir = __DIR__ . "/../frontend/uploads/";
-
-            if (!is_dir($targetDir)) {
-                mkdir($targetDir, 0777, true);
-            }
-
-            $target = $targetDir . $filename;
-
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
-                $image_url = "frontend/uploads/" . $filename;
-            }
+    $mainImageError = $_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE;
+    if ($mainImageError !== UPLOAD_ERR_NO_FILE) {
+        if ($mainImageError !== UPLOAD_ERR_OK) {
+            throw new RuntimeException('图片上传失败，请重新选择文件。');
         }
+        $allowed = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'];
+        $mime = mime_content_type($_FILES['image']['tmp_name']);
+        if (!isset($allowed[$mime])) {
+            throw new RuntimeException('图片格式只支持 JPG、PNG、GIF 或 WEBP。');
+        }
+        if ((int)$_FILES['image']['size'] > 2 * 1024 * 1024) {
+            throw new RuntimeException('图片大小不能超过 2MB。');
+        }
+        $filename = uniqid('', true) . "." . $allowed[$mime];
+        $targetDir = __DIR__ . "/../frontend/uploads/";
+        if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
+            throw new RuntimeException('无法建立图片上传目录。');
+        }
+        $target = $targetDir . $filename;
+        if (!move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
+            throw new RuntimeException('图片保存失败，请稍后重试。');
+        }
+        $image_url = "frontend/uploads/" . $filename;
     }
 
     // 更新数据库
-    $pdo->beginTransaction();
-    $stmt = $pdo->prepare("UPDATE products
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare("UPDATE products
         SET sku=?, name=?, product_type=?, variant_flavors=?, variant_sizes=?, price=?, stock=?, category=?, image_url=?, sort_order=?, is_hot=?
         WHERE id=?");
 
-    $stmt->execute([
+        $stmt->execute([
         $sku,
         $name,
         $productType,
@@ -131,10 +137,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sort_order,
         $is_hot,
         $id
-    ]);
-    $pdo->prepare('UPDATE products SET parent_product_id=NULL WHERE parent_product_id=?')->execute([$id]);
-    $pdo->prepare('DELETE FROM product_variants WHERE product_id=?')->execute([$id]);
-    if ($productType === 'grouped') {
+        ]);
+        $pdo->prepare('UPDATE products SET parent_product_id=NULL WHERE parent_product_id=?')->execute([$id]);
+        $pdo->prepare('DELETE FROM product_variants WHERE product_id=?')->execute([$id]);
+        if ($productType === 'grouped') {
         $variantNames = $_POST['variant_name'] ?? [];
         if (count($variantNames) === 0) {
             throw new RuntimeException('分类商品至少需要一个分类项目。');
@@ -165,16 +171,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ? max(0, (int)$_POST['variant_stock'][$index])
                 : max(0, (int)($source['stock'] ?? 0));
             $variantImage = trim($_POST['existing_variant_image'][$index] ?? '') ?: (string)($source['image_url'] ?? '');
-            if (isset($_FILES['variant_image']['error'][$index]) && $_FILES['variant_image']['error'][$index] === UPLOAD_ERR_OK) {
+            $variantUploadError = $_FILES['variant_image']['error'][$index] ?? UPLOAD_ERR_NO_FILE;
+            if ($variantUploadError !== UPLOAD_ERR_NO_FILE) {
+                if ($variantUploadError !== UPLOAD_ERR_OK) {
+                    throw new RuntimeException('分类项目图片上传失败，请重新选择文件。');
+                }
                 $allowed = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'];
                 $tmp = $_FILES['variant_image']['tmp_name'][$index];
                 $mime = mime_content_type($tmp);
-                if (isset($allowed[$mime]) && $_FILES['variant_image']['size'][$index] <= 2 * 1024 * 1024) {
-                    $filename = uniqid('', true) . '.' . $allowed[$mime];
-                    if (move_uploaded_file($tmp, __DIR__ . '/../frontend/uploads/' . $filename)) {
-                        $variantImage = 'frontend/uploads/' . $filename;
-                    }
+                if (!isset($allowed[$mime])) {
+                    throw new RuntimeException('分类项目图片格式只支持 JPG、PNG、GIF 或 WEBP。');
                 }
+                if ((int)$_FILES['variant_image']['size'][$index] > 2 * 1024 * 1024) {
+                    throw new RuntimeException('分类项目图片大小不能超过 2MB。');
+                }
+                $filename = uniqid('', true) . '.' . $allowed[$mime];
+                if (!move_uploaded_file($tmp, __DIR__ . '/../frontend/uploads/' . $filename)) {
+                    throw new RuntimeException('分类项目图片保存失败，请稍后重试。');
+                }
+                $variantImage = 'frontend/uploads/' . $filename;
             }
             $insertVariant = $pdo->prepare('INSERT INTO product_variants
               (product_id,source_product_id,variant_name,sku,price,stock,image_url,sort_order) VALUES (?,?,?,?,?,?,?,?)');
@@ -187,11 +202,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ->execute([$variantName,$variantSku,$variantPrice,$variantStock,$variantImage ?: null,$id,$sourceId]);
             }
         }
-    }
-    $pdo->commit();
+        }
 
-    header("Location: products.php?cat=" . urlencode($category) . "&msg=" . urlencode("✅ 商品已更新"));
-    exit;
+        if (!empty($p['parent_product_id']) && $productType === 'single') {
+            $pdo->prepare(
+                'UPDATE product_variants
+                 SET variant_name=?,sku=?,price=?,stock=?,image_url=?
+                 WHERE source_product_id=?'
+            )->execute([$name,$sku,$price,$stock,$image_url ?: null,$id]);
+        }
+
+        $pdo->commit();
+        header("Location: products.php?cat=" . urlencode($category) . "&msg=" . urlencode("✅ 商品已更新"));
+        exit;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $error = '更新失败：' . $e->getMessage();
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -447,6 +476,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <p>修改商品资料、价格、库存、分类、图片和热销状态</p>
     </div>
   </section>
+  <?php if($error): ?><div class="msg"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
   <div class="edit-layout">
     <aside class="preview-card">

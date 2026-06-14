@@ -260,7 +260,7 @@ function uploadImage($fileInput) {
 // ====================
 // 更新 is_hot（🔥最重要）
 // ====================
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id']) && !isset($_POST['add_product'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_hot'], $_POST['id'])) {
 
     $id = intval($_POST['id']);
     $is_hot = isset($_POST['is_hot']) ? 1 : 0;
@@ -268,7 +268,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id']) && !isset($_POS
     if ($is_hot) {
 
         // 🔥 Find the current maximum hot_order
-        $stmt = $pdo->query("SELECT MAX(hot_order) FROM products WHERE is_hot=1");
+        $stmt = $pdo->query("SELECT MAX(hot_order) FROM products WHERE is_hot=1 AND parent_product_id IS NULL");
         $max = $stmt->fetchColumn();
         $new_order = $max ? $max + 1 : 1;
 
@@ -302,7 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hot_move'], $_POST['i
     $id = intval($_POST['id']);
     $move = $_POST['hot_move'];
 
-    $stmt = $pdo->prepare("SELECT * FROM products WHERE id=? AND is_hot=1");
+    $stmt = $pdo->prepare("SELECT * FROM products WHERE id=? AND is_hot=1 AND parent_product_id IS NULL");
     $stmt->execute([$id]);
     $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -313,13 +313,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hot_move'], $_POST['i
         if ($move === 'up') {
             $stmt = $pdo->prepare("
                 SELECT * FROM products 
-                WHERE is_hot=1 AND hot_order < ? 
+                WHERE is_hot=1 AND parent_product_id IS NULL AND hot_order < ?
                 ORDER BY hot_order DESC LIMIT 1
             ");
         } else {
             $stmt = $pdo->prepare("
                 SELECT * FROM products 
-                WHERE is_hot=1 AND hot_order > ? 
+                WHERE is_hot=1 AND parent_product_id IS NULL AND hot_order > ?
                 ORDER BY hot_order ASC LIMIT 1
             ");
         }
@@ -343,7 +343,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hot_move'], $_POST['i
     // ====================
     // 🔥 重新整理 hot_order
     // ====================
-    $stmt = $pdo->query("SELECT id FROM products WHERE is_hot=1 ORDER BY hot_order ASC");
+    $stmt = $pdo->query("SELECT id FROM products WHERE is_hot=1 AND parent_product_id IS NULL ORDER BY hot_order ASC");
     $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     foreach ($ids as $i => $pid) {
@@ -352,7 +352,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hot_move'], $_POST['i
     }
 
     // 🔥 回传最新数据
-    $stmt = $pdo->query("SELECT id,name,price,image_url,hot_order FROM products WHERE is_hot=1 ORDER BY hot_order ASC");
+    $stmt = $pdo->query("SELECT id,name,price,image_url,hot_order FROM products WHERE is_hot=1 AND parent_product_id IS NULL ORDER BY hot_order ASC");
 
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
     exit;
@@ -363,7 +363,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hot_move'], $_POST['i
 // ====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_product'])) {
     $id=intval($_POST['delete_product']);
-    $pdo->prepare("DELETE FROM products WHERE id=?")->execute([$id]);
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare("UPDATE products SET parent_product_id=NULL WHERE parent_product_id=?")->execute([$id]);
+        $pdo->prepare("DELETE FROM product_variants WHERE source_product_id=?")->execute([$id]);
+        $pdo->prepare("DELETE FROM products WHERE id=?")->execute([$id]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
     header("Location: products.php?cat=" . urlencode($cat) . "&msg=" . urlencode("❌ 商品已删除"));
     exit;
 }
@@ -375,7 +386,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move'],$_POST['id']))
     $id=intval($_POST['id']);
     $move=$_POST['move'];
 
-    $stmt=$pdo->prepare("SELECT * FROM products WHERE id=?");
+    $stmt=$pdo->prepare("SELECT * FROM products WHERE id=? AND parent_product_id IS NULL");
     $stmt->execute([$id]); 
     $product=$stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -384,10 +395,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move'],$_POST['id']))
         $category=$product['category'];
 
         if ($move==='up') {
-            $stmt=$pdo->prepare("SELECT * FROM products WHERE category=? AND sort_order < ? ORDER BY sort_order DESC LIMIT 1");
+            $stmt=$pdo->prepare("SELECT * FROM products WHERE category=? AND parent_product_id IS NULL AND sort_order < ? ORDER BY sort_order DESC LIMIT 1");
             $stmt->execute([$category,$current_sort]);
         } elseif ($move==='down') {
-            $stmt=$pdo->prepare("SELECT * FROM products WHERE category=? AND sort_order > ? ORDER BY sort_order ASC LIMIT 1");
+            $stmt=$pdo->prepare("SELECT * FROM products WHERE category=? AND parent_product_id IS NULL AND sort_order > ? ORDER BY sort_order ASC LIMIT 1");
             $stmt->execute([$category,$current_sort]);
         }
 
@@ -415,7 +426,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move'],$_POST['id']))
 // 重新整理排序（保证连续）
 // ====================
 if ($selectedCat !== '') {
-    $stmt = $pdo->prepare("SELECT id FROM products WHERE category=? ORDER BY sort_order ASC,id ASC");
+    $stmt = $pdo->prepare("SELECT id FROM products WHERE category=? AND parent_product_id IS NULL ORDER BY sort_order ASC,id ASC");
     $stmt->execute([$selectedCat]);
     $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
@@ -735,6 +746,7 @@ $openSort = $_GET['open_sort'] ?? '';
           <form method="post" style="display:inline;">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
+            <input type="hidden" name="update_hot" value="1">
             
             <label>
               <input type="checkbox" name="is_hot" value="1"

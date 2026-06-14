@@ -74,6 +74,29 @@ foreach ($categoryGroups as $groupKey => $group) {
     }
 }
 
+$categoryGroups = [];
+$categories = [];
+$categoryGroupLabels = [];
+$categoryStmt = $pdo->query(
+    "SELECT g.group_key,g.label group_label,c.category_key,c.name category_name
+     FROM category_groups g
+     JOIN product_categories c ON c.group_id=g.id
+     WHERE g.status=1 AND c.status=1
+     ORDER BY g.sort_order,c.sort_order"
+);
+foreach ($categoryStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $groupKey = $row['group_key'];
+    if (!isset($categoryGroups[$groupKey])) {
+        $categoryGroups[$groupKey] = [
+            'label' => $row['group_label'],
+            'children' => [],
+        ];
+    }
+    $categoryGroups[$groupKey]['children'][$row['category_key']] = $row['category_name'];
+    $categories[$row['category_key']] = $row['category_name'];
+    $categoryGroupLabels[$row['category_key']] = $row['group_label'];
+}
+
 try {
 
     $type = $_GET['type'] ?? '';
@@ -112,17 +135,27 @@ try {
     if ($type === 'product_map') {
 
         $stmt = $pdo->prepare("
-            SELECT 
-                id,
-                sku,
-                name,
-                category,
-                stock,
-                warning_level,
-                is_hot,
-                hot_order
-            FROM products
-            ORDER BY category ASC, sort_order ASC, id DESC
+            SELECT
+                p.id,p.sku,p.name,p.category,p.stock,p.warning_level,p.is_hot,p.hot_order
+            FROM products p
+            WHERE p.parent_product_id IS NULL AND p.product_type='single'
+
+            UNION ALL
+
+            SELECT
+                COALESCE(v.source_product_id, -v.id) id,
+                v.sku,
+                CONCAT(parent.name, ' · ', v.variant_name) name,
+                parent.category,
+                v.stock,
+                COALESCE(source.warning_level, parent.warning_level, 5) warning_level,
+                parent.is_hot,
+                parent.hot_order
+            FROM product_variants v
+            JOIN products parent ON parent.id=v.product_id
+            LEFT JOIN products source ON source.id=v.source_product_id
+
+            ORDER BY category ASC, id DESC
         ");
         $stmt->execute();
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -176,20 +209,29 @@ try {
         }
 
         $stmt = $pdo->prepare("
-            SELECT 
-                id,
-                sku,
-                name,
-                category,
-                stock,
-                warning_level,
-                is_hot,
-                hot_order
-            FROM products
-            WHERE sku = ?
+            SELECT
+                COALESCE(v.source_product_id, -v.id) id,
+                v.sku,
+                CONCAT(parent.name, ' · ', v.variant_name) name,
+                parent.category,
+                v.stock,
+                COALESCE(source.warning_level, parent.warning_level, 5) warning_level,
+                parent.is_hot,
+                parent.hot_order
+            FROM product_variants v
+            JOIN products parent ON parent.id=v.product_id
+            LEFT JOIN products source ON source.id=v.source_product_id
+            WHERE v.sku=?
+
+            UNION ALL
+
+            SELECT
+                p.id,p.sku,p.name,p.category,p.stock,p.warning_level,p.is_hot,p.hot_order
+            FROM products p
+            WHERE p.sku=? AND p.parent_product_id IS NULL AND p.product_type='single'
             LIMIT 1
         ");
-        $stmt->execute([$sku]);
+        $stmt->execute([$sku, $sku]);
         $p = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$p) {

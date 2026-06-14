@@ -83,7 +83,12 @@ switch ($mode) {
               FROM product_variants v JOIN products p ON p.id=v.product_id WHERE v.id=? LIMIT 1');
             $stmt->execute([$variantId]);
         } else {
-            $stmt = $pdo->prepare('SELECT id,sku,name,price,image_url,stock FROM products WHERE sku=? LIMIT 1');
+            $stmt = $pdo->prepare(
+                "SELECT id,sku,name,price,image_url,stock
+                 FROM products
+                 WHERE sku=? AND parent_product_id IS NULL AND product_type='single'
+                 LIMIT 1"
+            );
             $stmt->execute([$sku]);
         }
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -174,7 +179,7 @@ switch ($mode) {
                 'cart_key' => $cartKey,
                 'name'  => $product['name'] . ($variant ? ' · ' . $variant['variant_name'] : ''),
                 'price' => (float)($variant['price'] ?? $product['price']),
-                'img'   => $variant['image_url'] ?: $product['image_url'],
+                'img'   => ($variant['image_url'] ?? null) ?: $product['image_url'],
                 'qty'   => 1
             ];
         }

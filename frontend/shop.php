@@ -1,6 +1,8 @@
 <?php
 session_start(); 
 require __DIR__ . '/../config.php';
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
 $sortAdmin = isset($_GET['sort_admin']) && $_GET['sort_admin'] === '1';
 if ($sortAdmin) {
     require __DIR__ . '/../backend/auth_admin.php';
@@ -524,7 +526,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
           document.getElementById("category-title").textContent = link.textContent;
 
           // AJAX 拉商品
-          fetch(`shop?cat=${encodeURIComponent(cat)}&ajax=1<?= $sortAdmin ? '&sort_admin=1' : '' ?>`)
+          fetch(<?= json_encode(appUrl('shop')) ?> + `?cat=${encodeURIComponent(cat)}&ajax=1<?= $sortAdmin ? '&sort_admin=1' : '' ?>`, {cache:'no-store'})
             .then(res => res.text())
             .then(html => {
               document.querySelector(".shop-content").innerHTML = html;
@@ -634,7 +636,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
       data.append('ordered_ids', JSON.stringify(ids));
 
       try {
-        const response = await fetch('backend/product_sort.php', {method:'POST', body:data});
+        const response = await fetch(<?= json_encode(appUrl('backend/product_sort.php')) ?>, {method:'POST', body:data});
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.message || '保存失败');
         window.sortOrderDirty = false;
@@ -699,7 +701,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
         formData.append("price", btn.dataset.price);
         formData.append("img", btn.dataset.img);
 
-        fetch("frontend/api/add_to_cart.php", { method: "POST", body: formData })
+        fetch(<?= json_encode(appUrl('frontend/api/add_to_cart.php')) ?>, { method: "POST", body: formData })
         .then(res => res.json())
         .then(data => {
           if (data.success && typeof updateCartUI === "function") {
@@ -864,7 +866,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
           if (selected.button.dataset.productType === "grouped") {
             data.append("variant_id", selected.variant?.id || "");
           }
-          const response = await fetch("frontend/api/add_to_cart.php", {method:"POST", body:data});
+          const response = await fetch(<?= json_encode(appUrl('frontend/api/add_to_cart.php')) ?>, {method:"POST", body:data});
           const result = await response.json();
           if (!result.success) throw new Error(result.message || "加入购物袋失败");
           window.cartData = result;

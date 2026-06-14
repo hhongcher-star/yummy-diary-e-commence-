@@ -130,7 +130,7 @@ if (!isset($_COOKIE['visitor_token'])) {
           陪你收集每一份小确幸
 
         </p>
-        <button class="btn" onclick="location.href='/shop'"><strong>进入商店 Shop Now</strong></button>
+        <button class="btn" onclick="location.href=<?= htmlspecialchars(json_encode(appUrl('shop')), ENT_QUOTES) ?>"><strong>进入商店 Shop Now</strong></button>
       </div>
     </section>
 

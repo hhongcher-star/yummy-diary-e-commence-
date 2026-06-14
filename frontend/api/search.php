@@ -12,17 +12,33 @@ if ($q !== '') {
     $conditions = [];
     $params = [];
     foreach ($keywords as $kw) {
-        $conditions[] = "(name LIKE ? OR sku LIKE ? OR pinyin LIKE ?)";
+        $conditions[] = "(p.name LIKE ? OR p.sku LIKE ? OR p.pinyin LIKE ?
+            OR EXISTS (
+                SELECT 1 FROM product_variants v
+                WHERE v.product_id=p.id AND (v.variant_name LIKE ? OR v.sku LIKE ?)
+            ))";
+        $params[] = "%{$kw}%";
+        $params[] = "%{$kw}%";
         $params[] = "%{$kw}%";
         $params[] = "%{$kw}%";
         $params[] = "%{$kw}%";
     }
 
-    $sql = "SELECT * FROM products";
+    $sql = "SELECT p.*,
+              CASE WHEN p.product_type='grouped'
+                THEN COALESCE((SELECT SUM(v.stock) FROM product_variants v WHERE v.product_id=p.id),0)
+                ELSE p.stock
+              END AS display_stock,
+              CASE WHEN p.product_type='grouped'
+                THEN COALESCE((SELECT MIN(v.price) FROM product_variants v WHERE v.product_id=p.id),p.price)
+                ELSE p.price
+              END AS display_price
+            FROM products p
+            WHERE p.parent_product_id IS NULL";
     if ($conditions) {
-        $sql .= " WHERE " . implode(" AND ", $conditions);
+        $sql .= " AND " . implode(" AND ", $conditions);
     }
-    $sql .= " ORDER BY created_at DESC";
+    $sql .= " ORDER BY p.created_at DESC";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -81,27 +97,32 @@ if ($q !== '') {
       <?php foreach ($products as $p): ?>
         <div class="product-card">
           <div class="product-info">
-            <?php if ($p['stock'] <= 0): ?>
+            <?php if ((int)$p['display_stock'] <= 0): ?>
               <div class="soldout-tag">SOLD OUT</div>
             <?php endif; ?>
             <img src="/yummy-diary/<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
             <div class="product-text">
               <h4>[<?= htmlspecialchars($p['sku'], ENT_QUOTES) ?>] <?= htmlspecialchars($p['name'], ENT_QUOTES) ?></h4>
-              <p>库存：<?= (int)$p['stock'] ?></p>
-              <div class="price">RM <?= number_format($p['price'],2) ?></div>
+              <p>库存：<?= (int)$p['display_stock'] ?></p>
+              <div class="price">RM <?= number_format((float)$p['display_price'],2) ?></div>
             </div>
           </div>
 
-          <?php if ($p['stock'] > 0): ?>
+          <?php if ((int)$p['display_stock'] > 0 && ($p['product_type'] ?? 'single') === 'single'): ?>
             <button class="add-to-cart"
                     data-id="<?= (int)$p['id'] ?>"
                     data-sku="<?= htmlspecialchars($p['sku'], ENT_QUOTES) ?>"
                     data-name="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>"
                     data-price="<?= htmlspecialchars($p['price'], ENT_QUOTES) ?>"
                     data-img="<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>"
-                    data-stock="<?= (int)$p['stock'] ?>">
+                    data-stock="<?= (int)$p['display_stock'] ?>">
               +
             </button>
+          <?php elseif ((int)$p['display_stock'] > 0): ?>
+            <a href="<?= htmlspecialchars(appUrl('shop') . '?cat=' . rawurlencode($p['category']), ENT_QUOTES) ?>"
+               style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:32px;border:1px solid #000;border-radius:6px;color:#000;text-decoration:none;">
+              查看
+            </a>
           <?php else: ?>
             <button disabled>售罄</button>
           <?php endif; ?>
@@ -110,7 +131,7 @@ if ($q !== '') {
     <?php else: ?>
       <div style="text-align:center; padding:20px;">
         <p>❌ 没有找到相关商品。</p>
-        <a href="/shop"
+        <a href="<?= htmlspecialchars(appUrl('shop'), ENT_QUOTES) ?>"
            style="display:inline-block; margin-top:10px; padding:8px 14px; background:#000; color:#fff; border-radius:6px; text-decoration:none;">
           返回商店 🛒
         </a>
@@ -151,7 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
       formData.append("price", btn.dataset.price);
       formData.append("img", btn.dataset.img);
 
-      fetch("frontend/api/add_to_cart.php", { method:"POST", body:formData })
+      fetch(<?= json_encode(appUrl('frontend/api/add_to_cart.php')) ?>, { method:"POST", body:formData })
         .then(res=>res.json())
         .then(data => {
           if(data.success && typeof updateCartUI === "function") {

@@ -40,7 +40,7 @@ try {
     $total = 0.0;
 
     $productStmt = $pdo->prepare(
-        'SELECT id, sku, name, price, image_url, stock
+        'SELECT id, sku, name, product_type, parent_product_id, price, image_url, stock
          FROM products
          WHERE id = ?
          FOR UPDATE'
@@ -67,6 +67,13 @@ try {
 
         if (!$product) {
             throw new RuntimeException('商品不存在');
+        }
+
+        if ($variantId <= 0 && (
+            ($product['product_type'] ?? 'single') !== 'single'
+            || !empty($product['parent_product_id'])
+        )) {
+            throw new RuntimeException('购物车商品资料已更新，请清除后重新加入');
         }
 
         $variant = null;
@@ -169,6 +176,12 @@ try {
          SET stock = stock - ?
          WHERE id = ? AND stock >= ?'
     );
+    $syncSourceStockStmt = $pdo->prepare(
+        'UPDATE products p
+         JOIN product_variants v ON v.source_product_id = p.id
+         SET p.stock = v.stock
+         WHERE v.id = ?'
+    );
 
     foreach ($items as $item) {
         $itemStmt->execute([
@@ -188,6 +201,9 @@ try {
             ]);
 
             $stockUpdated = $variantStockStmt->rowCount() === 1;
+            if ($stockUpdated) {
+                $syncSourceStockStmt->execute([$item['variant_id']]);
+            }
         } else {
             $stockStmt->execute([
                 $item['qty'],
@@ -220,7 +236,7 @@ try {
         'region' => $region,
         'shipping' => $shipping,
         'grand_total' => $grandTotal,
-        'receipt_url' => 'receipt?order_number=' . rawurlencode($orderNumber)
+        'receipt_url' => appUrl('receipt') . '?order_number=' . rawurlencode($orderNumber)
             . '&token=' . rawurlencode($accessToken),
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {

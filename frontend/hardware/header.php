@@ -1,19 +1,19 @@
 <header>
   <div class="logo">
-    <a href="/">
+    <a href="<?= htmlspecialchars(appUrl(), ENT_QUOTES) ?>">
       <img src="/yummy-diary/images/logo1" alt="Yummy Diary Logo">
     </a>
   </div>
 
   <nav>
-    <a href="/">首页 Home</a>
-    <a href="/shop">商店 Shop</a>
-    <a href="/contact">联系 Contact</a>
+    <a href="<?= htmlspecialchars(appUrl(), ENT_QUOTES) ?>">首页 Home</a>
+    <a href="<?= htmlspecialchars(appUrl('shop'), ENT_QUOTES) ?>">商店 Shop</a>
+    <a href="<?= htmlspecialchars(appUrl('contact'), ENT_QUOTES) ?>">联系 Contact</a>
   </nav>
 
   <div class="nav-right">
     <!-- ✅ 搜索改为 /search -->
-    <form class="search-box" action="/search" method="get" style="position:relative;">
+    <form class="search-box" action="<?= htmlspecialchars(appUrl('search'), ENT_QUOTES) ?>" method="get" style="position:relative;">
       <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="8"></circle>
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    fetch("api/search-suggest?q=" + encodeURIComponent(query))
+    fetch(<?= json_encode(appUrl('api/search-suggest')) ?> + "?q=" + encodeURIComponent(query))
       .then(res => res.json())
       .then(data => {
         suggestionsBox.innerHTML = "";
@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
             div.textContent = `[${item.sku}] ${item.name}`;
             div.addEventListener("click", () => {
               searchBox.value = item.name;
-              window.location.href = "search?q=" + encodeURIComponent(item.name);
+              window.location.href = <?= json_encode(appUrl('search')) ?> + "?q=" + encodeURIComponent(item.name);
             });
             suggestionsBox.appendChild(div);
           });

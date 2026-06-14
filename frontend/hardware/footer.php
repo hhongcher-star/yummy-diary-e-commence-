@@ -417,7 +417,7 @@ body::after{
 
 function getCartAndUpdate(){
 
-  return fetch("frontend/api/add_to_cart.php?mode=getCart")
+  return fetch(<?= json_encode(appUrl('frontend/api/add_to_cart.php?mode=getCart')) ?>)
     .then(res=>res.json())
     .then(data=>{
 
@@ -795,8 +795,8 @@ document.addEventListener("DOMContentLoaded",()=>{
         fd.append("img",t.dataset.img);
 
         const url=t.classList.contains("dec")
-          ? "frontend/api/add_to_cart.php?mode=removeOne"
-          : "frontend/api/add_to_cart.php";
+          ? <?= json_encode(appUrl('frontend/api/add_to_cart.php?mode=removeOne')) ?>
+          : <?= json_encode(appUrl('frontend/api/add_to_cart.php')) ?>;
 
         fetch(url,{
           method:"POST",
@@ -811,7 +811,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("clearCartBtn")
     .addEventListener("click",()=>{
 
-      fetch("frontend/api/add_to_cart.php?mode=clear")
+      fetch(<?= json_encode(appUrl('frontend/api/add_to_cart.php?mode=clear')) ?>)
         .then(r=>r.json())
         .then(d=>updateCartUI(d));
     });
@@ -834,7 +834,7 @@ document.addEventListener("DOMContentLoaded",()=>{
         );
 
         const checkoutResponse=await fetch(
-          "frontend/api/checkout.php",
+          <?= json_encode(appUrl('frontend/api/checkout.php')) ?>,
           {
             method:"POST",
             body:fd
@@ -848,7 +848,7 @@ document.addEventListener("DOMContentLoaded",()=>{
           !checkoutData.success
         ){
           throw new Error(
-            checkoutData.msg || "建立订单失败"
+            checkoutData.msg || checkoutData.message || "建立订单失败"
           );
         }
 

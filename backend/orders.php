@@ -54,6 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_ids'])) {
             $variantStockStmt = $pdo->prepare(
                 'UPDATE product_variants SET stock=stock+? WHERE product_id=? AND sku=?'
             );
+            $syncSourceStockStmt = $pdo->prepare(
+                'UPDATE products p
+                 JOIN product_variants v ON v.source_product_id=p.id
+                 SET p.stock=v.stock
+                 WHERE v.product_id=? AND v.sku=?'
+            );
             $cancelStmt = $pdo->prepare(
                 "UPDATE orders
                  SET status='cancelled', stock_released_at=COALESCE(stock_released_at, NOW()), archived_at=NOW()
@@ -78,6 +84,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_ids'])) {
                         ]);
                         if ($variantStockStmt->rowCount() === 0) {
                             $stockStmt->execute([(int)$item['quantity'], (int)$item['product_id']]);
+                        } else {
+                            $syncSourceStockStmt->execute([
+                                (int)$item['product_id'],
+                                (string)$item['sku'],
+                            ]);
                         }
                     }
                     $cancelStmt->execute([$id]);

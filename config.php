@@ -22,11 +22,54 @@ function loadLocalEnvironment(string $path): void
 
 loadLocalEnvironment(__DIR__ . '/.env');
 
+function appBasePath(): string
+{
+    static $basePath;
+    if ($basePath !== null) {
+        return $basePath;
+    }
+
+    $scriptName = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    foreach (['/frontend/', '/backend/'] as $marker) {
+        $position = strpos($scriptName, $marker);
+        if ($position !== false) {
+            return $basePath = rtrim(substr($scriptName, 0, $position), '/');
+        }
+    }
+
+    $directory = str_replace('\\', '/', dirname($scriptName));
+    return $basePath = $directory === '/' || $directory === '.' ? '' : rtrim($directory, '/');
+}
+
+function appUrl(string $path = ''): string
+{
+    $basePath = appBasePath();
+    $path = ltrim($path, '/');
+    return ($basePath !== '' ? $basePath : '') . '/' . $path;
+}
+
 $appEnvironment = getenv('APP_ENV') ?: 'production';
 ini_set('display_errors', $appEnvironment === 'development' ? '1' : '0');
 ini_set('display_startup_errors', $appEnvironment === 'development' ? '1' : '0');
 ini_set('log_errors', '1');
 error_reporting(E_ALL);
+
+$requestPath = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? $_SERVER['REQUEST_URI'] ?? ''));
+$isApiRequest = str_contains($requestPath, '/api/');
+if ($isApiRequest) {
+    set_exception_handler(static function (Throwable $e) use ($appEnvironment): void {
+        error_log($e->__toString());
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: application/json; charset=UTF-8');
+        }
+        echo json_encode([
+            'success' => false,
+            'message' => $appEnvironment === 'development' ? $e->getMessage() : 'Server error',
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    });
+}
 
 $host = 'localhost';
 $port = '3306';
@@ -48,5 +91,13 @@ try {
     ]);
 } catch (PDOException $e) {
     http_response_code(500);
+    if ($isApiRequest) {
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode([
+            'success' => false,
+            'message' => 'Database connection failed.',
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     exit('Database connection failed.');
 }

@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_order'])) {
       <p>选择分类后，直接拖动前台商品卡片调整显示顺序</p>
     </div>
   </section>
-  <iframe class="live-preview" src="../shop?sort_admin=1" title="实时前台商品排序"></iframe>
+  <iframe class="live-preview" src="<?= htmlspecialchars(appUrl('shop?sort_admin=1'), ENT_QUOTES) ?>" title="实时前台商品排序"></iframe>
   <div class="sort-mobile-only">
     <div>
       <span class="icon">🖥️</span>

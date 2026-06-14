@@ -24,14 +24,27 @@ function uploadProductImage(string $field, ?int $index = null): ?string {
         $tmp = $_FILES[$field]['tmp_name'][$index] ?? '';
         $size = $_FILES[$field]['size'][$index] ?? 0;
     }
-    if ($error !== UPLOAD_ERR_OK) return null;
+    if ($error === UPLOAD_ERR_NO_FILE) return null;
+    if ($error !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('图片上传失败，请重新选择文件。');
+    }
     $allowed = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'];
     $type = mime_content_type($tmp);
-    if (!isset($allowed[$type]) || $size > 2 * 1024 * 1024) return null;
+    if (!isset($allowed[$type])) {
+        throw new RuntimeException('图片格式只支持 JPG、PNG、GIF 或 WEBP。');
+    }
+    if ($size > 2 * 1024 * 1024) {
+        throw new RuntimeException('图片大小不能超过 2MB。');
+    }
     $dir = __DIR__ . '/../frontend/uploads/';
-    if (!is_dir($dir)) mkdir($dir, 0777, true);
+    if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+        throw new RuntimeException('无法建立图片上传目录。');
+    }
     $name = uniqid('', true) . '.' . $allowed[$type];
-    return move_uploaded_file($tmp, $dir . $name) ? 'frontend/uploads/' . $name : null;
+    if (!move_uploaded_file($tmp, $dir . $name)) {
+        throw new RuntimeException('图片保存失败，请稍后重试。');
+    }
+    return 'frontend/uploads/' . $name;
 }
 
 $error = '';

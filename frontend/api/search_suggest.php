@@ -10,17 +10,24 @@ $results = [];
 if ($q !== '') {
     // 模糊搜索：商品名 + SKU + 拼音
     $sql = "
-        SELECT id, sku, name, image_url, price, stock 
-        FROM products 
-        WHERE name LIKE ? 
-           OR sku LIKE ? 
-           OR (pinyin IS NOT NULL AND pinyin LIKE ?)
-        ORDER BY created_at DESC 
+        SELECT p.id, p.sku, p.name, p.image_url, p.price, p.stock
+        FROM products p
+        WHERE p.parent_product_id IS NULL
+          AND (
+               p.name LIKE ?
+            OR p.sku LIKE ?
+            OR (p.pinyin IS NOT NULL AND p.pinyin LIKE ?)
+            OR EXISTS (
+                SELECT 1 FROM product_variants v
+                WHERE v.product_id=p.id AND (v.variant_name LIKE ? OR v.sku LIKE ?)
+            )
+          )
+        ORDER BY p.created_at DESC
         LIMIT 10
     ";
     $stmt = $pdo->prepare($sql);
     $like = "%{$q}%";
-    $stmt->execute([$like, $like, $like]);
+    $stmt->execute([$like, $like, $like, $like, $like]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
