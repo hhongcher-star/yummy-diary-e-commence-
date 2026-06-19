@@ -8,6 +8,7 @@ if (isset($_GET['clear']) && $_GET['clear'] == '1') {
     unset($_SESSION['cart']);
     unset($_SESSION['orders']);
     unset($_SESSION['pending_order']);
+    unset($_SESSION['pending_orders']);
 }
 
 // ✅ 访客检测

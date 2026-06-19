@@ -102,10 +102,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_category'])) {
 // ====================
 // 删除小分类
 // ====================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_group'])) {
+    $groupId = (int)($_POST['group_id'] ?? 0);
+    $label = trim((string)($_POST['group_label'] ?? ''));
+
+    if ($groupId > 0 && $label !== '') {
+        $stmt = $pdo->prepare("UPDATE category_groups SET label=? WHERE id=?");
+        $stmt->execute([$label, $groupId]);
+        header("Location: products.php?open_category=1&alert=" . urlencode("大分类名称已修改"));
+        exit;
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
+    $categoryId = (int)($_POST['category_id'] ?? 0);
+    $name = trim((string)($_POST['category_name'] ?? ''));
+
+    if ($categoryId > 0 && $name !== '') {
+        $stmt = $pdo->prepare("UPDATE product_categories SET name=? WHERE id=?");
+        $stmt->execute([$name, $categoryId]);
+        header("Location: products.php?open_category=1&alert=" . urlencode("小分类名称已修改"));
+        exit;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_category'])) {
     $category_key = $_POST['category_key'] ?? '';
 
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE category=?");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE category=? AND parent_product_id IS NULL");
     $stmt->execute([$category_key]);
     $usedCount = (int)$stmt->fetchColumn();
 
@@ -203,6 +227,7 @@ $groupsForForm = $groupStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $categoryListStmt = $pdo->query(
     "SELECT
+        c.id,
         c.category_key,
         c.name AS category_name,
         g.label AS group_label
@@ -490,6 +515,14 @@ $openSort = $_GET['open_sort'] ?? '';
   .delete-row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;}
   .delete-row span{font-weight:700;color:var(--text);}
   .delete-row small{color:var(--muted);font-weight:600;}
+  .category-rename-form{display:grid;grid-template-columns:minmax(110px,1fr) auto;align-items:center;gap:8px;flex:1;}
+  .category-rename-form small{grid-column:1/-1;}
+  .category-rename-form input[type="text"]{min-width:0;width:100%;}
+  @media(max-width:700px){
+    .delete-row{align-items:stretch;flex-direction:column;}
+    .category-rename-form{grid-template-columns:1fr;}
+    .category-rename-form small{grid-column:auto;}
+  }
   .sort-section{display:grid;gap:18px;}
   .sort-panel{background:#fffaf4;border:1px solid var(--line);border-radius:22px;padding:18px;}
   .sort-panel h4{margin:0 0 14px;color:var(--text);}
@@ -503,6 +536,14 @@ $openSort = $_GET['open_sort'] ?? '';
   .sort-controls button{min-width:44px;padding:9px 12px;}
   .sort-group{display:grid;gap:10px;}
   .sort-children{display:grid;gap:8px;padding-left:22px;border-left:3px solid var(--soft);}
+  .site-dialog{display:none;position:fixed;inset:0;z-index:1200;background:rgba(40,30,20,.42);padding:20px;align-items:center;justify-content:center;}
+  .site-dialog.show{display:flex;}
+  .site-dialog-card{width:min(430px,100%);background:#fff;border:1px solid var(--line);border-radius:26px;padding:26px;box-shadow:0 24px 70px rgba(80,50,30,.25);}
+  .site-dialog-icon{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;margin-bottom:16px;background:var(--soft);color:#7a5a2d;font-size:24px;font-weight:800;}
+  .site-dialog-card h3{margin:0 0 10px;color:var(--text);}
+  .site-dialog-card p{margin:0;color:var(--muted);line-height:1.65;white-space:pre-line;}
+  .site-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;}
+  body.dialog-open{overflow:hidden;}
   @media(max-width:900px){.delete-split-grid{grid-template-columns:1fr;}}
   @media(max-width:768px){
     .page-header{flex-wrap:wrap;}
@@ -594,11 +635,13 @@ $openSort = $_GET['open_sort'] ?? '';
             <div class="delete-list">
               <?php foreach ($groupsForForm as $group): ?>
                 <div class="delete-row">
-                  <div>
-                    <span><?= htmlspecialchars($group['label']) ?></span>
-                    <small> ID: <?= (int)$group['id'] ?></small>
-                  </div>
-                  <form method="post" onsubmit="return confirm('确定删除这个大分类吗？');">
+                  <form method="post" class="category-rename-form">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                    <input type="hidden" name="group_id" value="<?= (int)$group['id'] ?>">
+                    <input type="text" name="group_label" value="<?= htmlspecialchars($group['label']) ?>" required>
+                    <button type="submit" name="rename_group" value="1" class="btn btn-edit">修改名称</button>
+                  </form>
+                  <form method="post" data-confirm="确定删除这个大分类吗？删除后不能恢复。">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                     <input type="hidden" name="group_id" value="<?= (int)$group['id'] ?>">
                     <button type="submit" name="delete_group" value="1" class="btn btn-delete">删除大分类</button>
@@ -613,11 +656,14 @@ $openSort = $_GET['open_sort'] ?? '';
             <div class="delete-list">
               <?php foreach ($categoryListForDelete as $item): ?>
                 <div class="delete-row">
-                  <div>
-                    <span><?= htmlspecialchars($item['group_label']) ?> / <?= htmlspecialchars($item['category_name']) ?></span>
-                    <small> <?= htmlspecialchars($item['category_key']) ?></small>
-                  </div>
-                  <form method="post" onsubmit="return confirm('确定删除这个小分类吗？');">
+                  <form method="post" class="category-rename-form">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                    <input type="hidden" name="category_id" value="<?= (int)$item['id'] ?>">
+                    <small><?= htmlspecialchars($item['group_label']) ?> / <?= htmlspecialchars($item['category_key']) ?></small>
+                    <input type="text" name="category_name" value="<?= htmlspecialchars($item['category_name']) ?>" required>
+                    <button type="submit" name="rename_category" value="1" class="btn btn-edit">修改名称</button>
+                  </form>
+                  <form method="post" data-confirm="确定删除这个小分类吗？删除后不能恢复。">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                     <input type="hidden" name="category_key" value="<?= htmlspecialchars($item['category_key']) ?>">
                     <button type="submit" name="delete_category" value="1" class="btn btn-delete">删除小分类</button>
@@ -757,7 +803,7 @@ $openSort = $_GET['open_sort'] ?? '';
           </form>
 
           <!-- ✅ 删除 -->
-          <form method="post" style="display:inline;" onsubmit="return confirm('确定删除？')">
+          <form method="post" style="display:inline;" data-confirm="确定删除这个商品吗？删除后不能恢复。">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
             <button type="submit" name="delete_product" value="<?= (int)$p['id'] ?>" class="btn btn-delete">
               🗑 删除
@@ -787,11 +833,88 @@ $openSort = $_GET['open_sort'] ?? '';
     </table>
   </div>
 </main>
+
+<div id="siteAlertDialog" class="site-dialog" role="dialog" aria-modal="true" aria-labelledby="siteAlertTitle">
+  <div class="site-dialog-card">
+    <div class="site-dialog-icon">✓</div>
+    <h3 id="siteAlertTitle">操作完成</h3>
+    <p id="siteAlertMessage"></p>
+    <div class="site-dialog-actions">
+      <button type="button" class="btn btn-edit" id="siteAlertOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<div id="siteConfirmDialog" class="site-dialog" role="dialog" aria-modal="true" aria-labelledby="siteConfirmTitle">
+  <div class="site-dialog-card">
+    <div class="site-dialog-icon">!</div>
+    <h3 id="siteConfirmTitle">请确认操作</h3>
+    <p id="siteConfirmMessage"></p>
+    <div class="site-dialog-actions">
+      <button type="button" class="btn btn-move" id="siteConfirmCancel">取消</button>
+      <button type="button" class="btn btn-delete" id="siteConfirmOk">确定删除</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const alertMsg = <?= json_encode($alert, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
-  if (alertMsg) {
-    alert(alertMsg);
+  const alertDialog = document.getElementById('siteAlertDialog');
+  const confirmDialog = document.getElementById('siteConfirmDialog');
+  let pendingConfirmForm = null;
+
+  function openSiteDialog(dialog) {
+    dialog.classList.add('show');
+    document.body.classList.add('dialog-open');
   }
+
+  function closeSiteDialog(dialog) {
+    dialog.classList.remove('show');
+    if (!document.querySelector('.site-dialog.show')) {
+      document.body.classList.remove('dialog-open');
+    }
+  }
+
+  if (alertMsg) {
+    document.getElementById('siteAlertMessage').textContent = alertMsg;
+    openSiteDialog(alertDialog);
+  }
+
+  document.getElementById('siteAlertOk').addEventListener('click', function () {
+    closeSiteDialog(alertDialog);
+  });
+
+  document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (form.dataset.confirmed === '1') {
+        return;
+      }
+      event.preventDefault();
+      pendingConfirmForm = form;
+      document.getElementById('siteConfirmMessage').textContent = form.dataset.confirm;
+      openSiteDialog(confirmDialog);
+    });
+  });
+
+  document.getElementById('siteConfirmCancel').addEventListener('click', function () {
+    pendingConfirmForm = null;
+    closeSiteDialog(confirmDialog);
+  });
+
+  document.getElementById('siteConfirmOk').addEventListener('click', function () {
+    if (!pendingConfirmForm) return;
+    pendingConfirmForm.dataset.confirmed = '1';
+    pendingConfirmForm.requestSubmit();
+  });
+
+  [alertDialog, confirmDialog].forEach(function (dialog) {
+    dialog.addEventListener('click', function (event) {
+      if (event.target === dialog) {
+        pendingConfirmForm = null;
+        closeSiteDialog(dialog);
+      }
+    });
+  });
 
   window.addEventListener('DOMContentLoaded', function () {
     if (<?= $openCategory === '1' ? 'true' : 'false' ?>) {

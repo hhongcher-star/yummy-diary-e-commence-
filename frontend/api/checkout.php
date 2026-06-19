@@ -14,14 +14,6 @@ if (empty($_SESSION['cart'])) {
     exit;
 }
 
-/**
- * region:
- * west = 西马
- * east = 东马
- *
- * 前端可以 POST region=west / east
- * 如果没有传，默认西马
- */
 $region = $_POST['region'] ?? $_SESSION['region'] ?? 'west';
 $region = strtolower(trim((string)$region));
 
@@ -106,24 +98,19 @@ try {
         ];
     }
 
-    /**
-     * 运费规则
-     */
     if ($region === 'east') {
-        // 东马
-        $shipping = 15.90;
+        $shipping = 12.90;
 
         if ($total >= 49.90) {
-            $shipping = 9.90;
+            $shipping = 4.90;
         } elseif ($total >= 39.90) {
-            $shipping = 11.90;
+            $shipping = 6.90;
         } elseif ($total >= 29.90) {
-            $shipping = 12.90;
+            $shipping = 8.90;
         } elseif ($total >= 19.90) {
-            $shipping = 13.90;
+            $shipping = 10.90;
         }
     } else {
-        // 西马
         $shipping = 7.50;
 
         if ($total >= 49.90) {
@@ -141,9 +128,9 @@ try {
 
     $orderStmt = $pdo->prepare(
         "INSERT INTO orders
-            (order_number, access_token, created_at, total, shipping, grand_total, region, status, currency)
+            (order_number, access_token, created_at, total, shipping, grand_total, region, status, currency, order_status)
          VALUES
-            (?, ?, ?, ?, ?, ?, ?, 'pending', 'MYR')"
+            (?, ?, ?, ?, ?, ?, ?, 'pending', 'MYR', 'draft')"
     );
 
     $orderStmt->execute([
@@ -165,24 +152,6 @@ try {
             (?, ?, ?, ?, ?, ?)'
     );
 
-    $stockStmt = $pdo->prepare(
-        'UPDATE products
-         SET stock = stock - ?
-         WHERE id = ? AND stock >= ?'
-    );
-
-    $variantStockStmt = $pdo->prepare(
-        'UPDATE product_variants
-         SET stock = stock - ?
-         WHERE id = ? AND stock >= ?'
-    );
-    $syncSourceStockStmt = $pdo->prepare(
-        'UPDATE products p
-         JOIN product_variants v ON v.source_product_id = p.id
-         SET p.stock = v.stock
-         WHERE v.id = ?'
-    );
-
     foreach ($items as $item) {
         $itemStmt->execute([
             $orderId,
@@ -192,42 +161,9 @@ try {
             $item['qty'],
             $item['price'],
         ]);
-
-        if ($item['variant_id'] > 0) {
-            $variantStockStmt->execute([
-                $item['qty'],
-                $item['variant_id'],
-                $item['qty'],
-            ]);
-
-            $stockUpdated = $variantStockStmt->rowCount() === 1;
-            if ($stockUpdated) {
-                $syncSourceStockStmt->execute([$item['variant_id']]);
-            }
-        } else {
-            $stockStmt->execute([
-                $item['qty'],
-                $item['id'],
-                $item['qty'],
-            ]);
-
-            $stockUpdated = $stockStmt->rowCount() === 1;
-        }
-
-        if (!$stockUpdated) {
-            throw new RuntimeException('库存更新失败：' . $item['name']);
-        }
     }
 
     $pdo->commit();
-
-    $_SESSION['order_access_tokens'][$orderNumber] = $accessToken;
-
-    unset(
-        $_SESSION['cart'],
-        $_SESSION['pending_order'],
-        $_SESSION['orders']
-    );
 
     echo json_encode([
         'success' => true,

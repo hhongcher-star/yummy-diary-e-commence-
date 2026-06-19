@@ -478,7 +478,7 @@ function getShipping(total){
     if(total>=49.90){
       return {
         region,
-        cost:9.90,
+        cost:4.90,
         note:"🎁 送：1包魔芋爽 + 小挂件",
         detail:"东马满 RM49.90"
       };
@@ -487,7 +487,7 @@ function getShipping(total){
     if(total>=39.90){
       return {
         region,
-        cost:11.90,
+        cost:6.90,
         note:"🎁 送：1包魔芋爽 + 小挂件",
         detail:"东马满 RM39.90"
       };
@@ -496,7 +496,7 @@ function getShipping(total){
     if(total>=29.90){
       return {
         region,
-        cost:12.90,
+        cost:8.90,
         note:"🎁 送：1包魔芋爽 + 小挂件",
         detail:"东马满 RM29.90"
       };
@@ -505,7 +505,7 @@ function getShipping(total){
     if(total>=19.90){
       return {
         region,
-        cost:13.90,
+        cost:10.90,
         note:"",
         detail:"东马满 RM19.90"
       };
@@ -513,7 +513,7 @@ function getShipping(total){
 
     return {
       region,
-      cost:15.90,
+      cost:12.90,
       note:"",
       detail:"东马普通运费"
     };

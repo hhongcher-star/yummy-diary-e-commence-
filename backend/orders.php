@@ -105,7 +105,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_ids'])) {
         }
     }
 
-    header("Location: orders.php");
+    if (!empty($ids) && isset($_POST['delete_selected'])) {
+        $pdo->beginTransaction();
+        try {
+            $orderStmt = $pdo->prepare('SELECT id, status, stock_released_at FROM orders WHERE id=? FOR UPDATE');
+            $itemStmt = $pdo->prepare('SELECT product_id, sku, quantity FROM order_items WHERE order_id=?');
+            $stockStmt = $pdo->prepare('UPDATE products SET stock=stock+? WHERE id=?');
+            $variantStockStmt = $pdo->prepare(
+                'UPDATE product_variants SET stock=stock+? WHERE product_id=? AND sku=?'
+            );
+            $syncSourceStockStmt = $pdo->prepare(
+                'UPDATE products p
+                 JOIN product_variants v ON v.source_product_id=p.id
+                 SET p.stock=v.stock
+                 WHERE v.product_id=? AND v.sku=?'
+            );
+            $deleteItemsStmt = $pdo->prepare('DELETE FROM order_items WHERE order_id=?');
+            $deleteOrderStmt = $pdo->prepare('DELETE FROM orders WHERE id=?');
+
+            foreach ($ids as $id) {
+                $orderStmt->execute([$id]);
+                $order = $orderStmt->fetch();
+                if (!$order) {
+                    continue;
+                }
+
+                if ($order['status'] === 'pending' && $order['stock_released_at'] === null) {
+                    $itemStmt->execute([$id]);
+                    foreach ($itemStmt->fetchAll() as $item) {
+                        $variantStockStmt->execute([
+                            (int)$item['quantity'],
+                            (int)$item['product_id'],
+                            (string)$item['sku'],
+                        ]);
+                        if ($variantStockStmt->rowCount() === 0) {
+                            $stockStmt->execute([(int)$item['quantity'], (int)$item['product_id']]);
+                        } else {
+                            $syncSourceStockStmt->execute([
+                                (int)$item['product_id'],
+                                (string)$item['sku'],
+                            ]);
+                        }
+                    }
+                }
+
+                $deleteItemsStmt->execute([$id]);
+                $deleteOrderStmt->execute([$id]);
+            }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Delete orders failed: ' . $e->getMessage());
+        }
+    }
+
+    $query = http_build_query([
+        'page' => max(1, (int)($_POST['current_page'] ?? 1)),
+        'search' => (string)($_POST['current_search'] ?? ''),
+        'month' => (string)($_POST['current_month'] ?? ''),
+    ]);
+    header('Location: orders.php?' . $query);
     exit;
 }
 
@@ -119,7 +180,7 @@ $offset = ($page - 1) * $limit;
 $search = $_GET['search'] ?? '';
 $month  = $_GET['month'] ?? '';
 
-$where = "WHERE archived_at IS NULL";
+$where = "WHERE archived_at IS NULL AND COALESCE(order_status, 'pending') <> 'draft'";
 $params = [];
 
 if ($search !== '') {
@@ -247,6 +308,18 @@ foreach ($orders as $order) {
   .amount{
     font-weight:900;
     white-space:nowrap;
+  }
+
+  .amount-details{
+    margin-top:4px;
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.45;
+    white-space:nowrap;
+  }
+
+  .amount-gift{
+    color:#b7652f;
   }
 
   .status-badge{
@@ -434,6 +507,7 @@ foreach ($orders as $order) {
       <button type="submit" name="mark_paid" value="1" class="btn btn-edit">标记已付款</button>
       <button type="submit" name="mark_unpaid" value="1" class="btn btn-move">标记未付款</button>
       <button type="submit" name="archive_selected" value="1" class="btn btn-delete">归档选中订单</button>
+      <button type="submit" name="delete_selected" value="1" class="btn btn-delete">永久删除选中收据</button>
     </div>
 
     <div class="table-wrapper">
@@ -458,7 +532,13 @@ foreach ($orders as $order) {
         <?php endif; ?>
 
         <?php foreach ($orders as $o): ?>
-          <?php $timeFormatted = date("Y年n月j日 H:i", strtotime($o['created_at'])); ?>
+          <?php
+            $timeFormatted = date("Y年n月j日 H:i", strtotime($o['created_at']));
+            $orderRegion = strtolower(trim((string)($o['region'] ?? '')));
+            $isEastMalaysia = $orderRegion === 'east';
+            $regionLabel = $isEastMalaysia ? '东马订单' : '西马订单';
+            $hasGift = (float)$o['total'] >= 29.90;
+          ?>
 
           <tr>
             <td>
@@ -484,6 +564,15 @@ foreach ($orders as $order) {
               <span class="amount">
                 RM <?= number_format($o['total'], 2) ?>
               </span>
+              <div class="amount-details">
+                <div><?= $regionLabel ?></div>
+                <div>运费 RM <?= number_format((float)($o['shipping'] ?? 0), 2) ?></div>
+                <?php if ($hasGift): ?>
+                  <div class="amount-gift">赠：1包魔芋爽 + 小挂件</div>
+                <?php else: ?>
+                  <div>赠：无</div>
+                <?php endif; ?>
+              </div>
             </td>
 
             <td>

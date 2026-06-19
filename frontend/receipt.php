@@ -11,6 +11,7 @@ if (!$order_number || !$access_token) {
 }
 
 $isAdmin = !empty($_SESSION['admin_id']);
+$isPendingReceipt = false;
 
 if ($isAdmin) {
     $stmt = $pdo->prepare("SELECT * FROM orders WHERE order_number=?");
@@ -48,6 +49,8 @@ foreach ($items as $it) {
     ];
 }
 
+$isPendingReceipt = (($order['order_status'] ?? 'pending') === 'draft');
+
 $timeFormatted = date("Y年n月j日 H:i", strtotime($order_data['time']));
 
 $total = 0;
@@ -59,36 +62,28 @@ $shipping_cost = (float)$order_data['shipping'];
 $grand_total = (float)$order_data['grand_total'];
 
 $gifts = [];
-$shipping_msg = "";
+$isEastMalaysia = strtolower(trim((string)($order['region'] ?? ''))) === 'east';
+$region_label = $isEastMalaysia ? '东马' : '西马';
+$shipping_tier = '普通运费';
 
-if (abs($shipping_cost - 15.90) < 0.01) {
-    $shipping_msg = "🚚 东马普通运费：RM15.90";
-} elseif (abs($shipping_cost - 13.90) < 0.01) {
-    $shipping_msg = "🚚 东马满 RM19.90：运费 RM13.90";
-} elseif (abs($shipping_cost - 12.90) < 0.01) {
-    $shipping_msg = "🚚 东马满 RM29.90：运费 RM12.90<br>🎁 赠品：1包魔芋爽 + 小挂件";
+if ($total >= 49.90) {
+    $shipping_tier = '满 RM49.90';
+} elseif ($total >= 39.90) {
+    $shipping_tier = '满 RM39.90';
+} elseif ($total >= 29.90) {
+    $shipping_tier = '满 RM29.90';
+} elseif ($total >= 19.90) {
+    $shipping_tier = '满 RM19.90';
+}
+
+$shipping_text = $shipping_cost > 0
+    ? '运费 RM' . number_format($shipping_cost, 2)
+    : '免运';
+$shipping_msg = "🚚 {$region_label}{$shipping_tier}：{$shipping_text}";
+
+if ($total >= 29.90) {
+    $shipping_msg .= '<br>🎁 赠品：1包魔芋爽 + 小挂件';
     $gifts = ["魔芋爽", "小挂件"];
-} elseif (abs($shipping_cost - 11.90) < 0.01) {
-    $shipping_msg = "🚚 东马满 RM39.90：运费 RM11.90<br>🎁 赠品：1包魔芋爽 + 小挂件";
-    $gifts = ["魔芋爽", "小挂件"];
-} elseif (abs($shipping_cost - 9.90) < 0.01) {
-    $shipping_msg = "🚚 东马满 RM49.90：运费 RM9.90<br>🎁 赠品：1包魔芋爽 + 小挂件";
-    $gifts = ["魔芋爽", "小挂件"];
-} elseif (abs($shipping_cost - 7.50) < 0.01) {
-    $shipping_msg = "🚚 西马普通运费：RM7.50";
-} elseif (abs($shipping_cost - 5.90) < 0.01) {
-    $shipping_msg = "🚚 西马满 RM19.90：运费 RM5.90";
-} elseif (abs($shipping_cost - 3.50) < 0.01) {
-    $shipping_msg = "🚚 西马满 RM29.90：运费 RM3.50<br>🎁 赠品：1包魔芋爽 + 小挂件";
-    $gifts = ["魔芋爽", "小挂件"];
-} elseif (abs($shipping_cost - 1.90) < 0.01) {
-    $shipping_msg = "🚚 西马满 RM39.90：运费 RM1.90<br>🎁 赠品：1包魔芋爽 + 小挂件";
-    $gifts = ["魔芋爽", "小挂件"];
-} elseif (abs($shipping_cost - 0.00) < 0.01) {
-    $shipping_msg = "🚚 西马满 RM49.90：免运<br>🎁 赠品：1包魔芋爽 + 小挂件";
-    $gifts = ["魔芋爽", "小挂件"];
-} else {
-    $shipping_msg = "🚚 运费：RM" . number_format($shipping_cost, 2);
 }
 ?>
 
@@ -465,9 +460,6 @@ th{
       <i class="fas fa-credit-card"></i> <strong>付款</strong>
     </button>
 
-    <button id="downloadPdf" class="btn-short">
-      <i class="fas fa-file-pdf"></i> PDF
-    </button>
   </div>
 </div>
 
@@ -477,13 +469,13 @@ th{
     <h3 id="paymentTitle">付款</h3>
     <p>
       请把付款记录发给
-      <a href="https://www.instagram.com/itszweii__?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw=="
+      <a href="https://www.instagram.com/yummydiaryy_?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw=="
          target="_blank"
-         rel="noopener noreferrer">@itszweii__</a>
+         rel="noopener noreferrer">@yummydiaryy_</a>
     </p>
     <img id="paymentImage" src="/yummy-diary/images/payment-qr.png" alt="Touch 'n Go 付款二维码">
     <a class="payment-instagram"
-       href="https://www.instagram.com/itszweii__?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw=="
+       href="https://www.instagram.com/yummydiaryy_?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw==="
        target="_blank"
        rel="noopener noreferrer">
       打开 Instagram 发送付款记录
@@ -499,16 +491,44 @@ th{
   <img src="/yummy-diary/images/payment-qr.png" alt="放大的 Touch 'n Go 付款二维码">
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
 <script>
 const paymentModal = document.getElementById("paymentModal");
 const imagePreview = document.getElementById("imagePreview");
+const isPendingReceipt = <?= $isPendingReceipt ? 'true' : 'false' ?>;
+const orderNumber = <?= json_encode($order_number) ?>;
+const accessToken = <?= json_encode($access_token) ?>;
+let paymentConfirmed = !isPendingReceipt;
 
-document.getElementById("openPayment").addEventListener("click", () => {
-  paymentModal.classList.add("show");
-  document.body.style.overflow = "hidden";
+document.getElementById("openPayment").addEventListener("click", async () => {
+  const button = document.getElementById("openPayment");
+  button.disabled = true;
+
+  try {
+    if (!paymentConfirmed) {
+      const formData = new FormData();
+      formData.append("order_number", orderNumber);
+      formData.append("token", accessToken);
+
+      const response = await fetch(<?= json_encode(appUrl('frontend/api/confirm_payment.php')) ?>, {
+        method: "POST",
+        body: formData
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.msg || data.message || "记录订单失败");
+      }
+
+      paymentConfirmed = true;
+    }
+
+    paymentModal.classList.add("show");
+    document.body.style.overflow = "hidden";
+  } catch (error) {
+    alert("❌ " + error.message);
+  } finally {
+    button.disabled = false;
+  }
 });
 
 function closePaymentModal(){
@@ -534,20 +554,6 @@ imagePreview.addEventListener("click", event => {
   if(event.target === imagePreview || event.target.tagName === "IMG") closeImagePreview();
 });
 
-document.getElementById("downloadPdf").addEventListener("click", () => {
-  const { jsPDF } = window.jspdf;
-  const receipt = document.getElementById("receipt");
-
-  html2canvas(receipt, { scale: 2 }).then(canvas => {
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pdfWidth = 210;
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save("YummyDiary-Receipt.pdf");
-  });
-});
 </script>
 
 </body>
