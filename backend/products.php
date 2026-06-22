@@ -822,7 +822,7 @@ $openSort = $_GET['open_sort'] ?? '';
               <span><?= htmlspecialchars($child['sku']) ?></span>
               <span>RM <?= number_format((float)$child['price'],2) ?></span>
               <span>库存 <?= (int)$child['stock'] ?></span>
-              <a class="btn btn-edit" href="edit_product.php?id=<?= (int)$child['id'] ?>">编辑</a>
+              <a class="btn btn-edit" href="edit_product.php?id=<?= (int)$p['id'] ?>#variant-<?= (int)$child['id'] ?>">在分类商品中编辑</a>
             </div>
           <?php endforeach; ?>
           <?php if(empty($childrenByParent[(int)$p['id']])): ?><p>还没有归入单商品。</p><?php endif; ?>

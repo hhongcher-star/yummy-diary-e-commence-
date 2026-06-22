@@ -46,6 +46,13 @@ $p = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$p) {
     die("❌ 未找到商品");
 }
+// Child products are managed from their grouped parent so product and variant
+// data cannot be edited through two competing forms.
+if (!empty($p['parent_product_id'])) {
+    header('Location: edit_product.php?id=' . (int)$p['parent_product_id'] . '#variant-' . $id);
+    exit;
+}
+
 $variantStmt = $pdo->prepare('SELECT * FROM product_variants WHERE product_id=? ORDER BY sort_order,id');
 $variantStmt->execute([$id]);
 $productVariants = $variantStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -577,7 +584,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div id="variantList">
           <?php foreach($productVariants as $variant): ?>
-            <div class="variant-row <?= !empty($variant['source_product_id']) ? 'variant-existing' : '' ?>">
+            <div id="variant-<?= (int)($variant['source_product_id'] ?? 0) ?>" class="variant-row <?= !empty($variant['source_product_id']) ? 'variant-existing' : '' ?>">
               <input name="variant_name[]" value="<?= htmlspecialchars($variant['variant_name']) ?>" placeholder="分类名称" required>
               <input type="hidden" name="source_product_id[]" value="<?= (int)($variant['source_product_id'] ?? 0) ?>">
               <?php if(!empty($variant['source_product_id'])): ?>

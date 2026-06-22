@@ -136,7 +136,7 @@ try {
 
         $stmt = $pdo->prepare("
             SELECT
-                p.id,p.sku,p.name,p.category,p.stock,p.warning_level,p.is_hot,p.hot_order
+                p.id,p.sku,p.name,NULL parent_name,NULL variant_name,p.category,p.stock,p.warning_level,p.is_hot,p.hot_order,p.image_url
             FROM products p
             WHERE p.parent_product_id IS NULL AND p.product_type='single'
 
@@ -146,11 +146,14 @@ try {
                 COALESCE(v.source_product_id, -v.id) id,
                 v.sku,
                 CONCAT(parent.name, ' · ', v.variant_name) name,
+                parent.name parent_name,
+                v.variant_name,
                 parent.category,
                 v.stock,
                 COALESCE(source.warning_level, parent.warning_level, 5) warning_level,
                 parent.is_hot,
-                parent.hot_order
+                parent.hot_order,
+                COALESCE(v.image_url, source.image_url, parent.image_url) image_url
             FROM product_variants v
             JOIN products parent ON parent.id=v.product_id
             LEFT JOIN products source ON source.id=v.source_product_id
@@ -172,13 +175,16 @@ try {
                 "id" => (int)$p['id'],
                 "sku" => $p['sku'],
                 "name" => $p['name'],
+                "parent_name" => $p['parent_name'] ?? null,
+                "variant_name" => $p['variant_name'] ?? null,
                 "category" => $categoryKey,
                 "category_label" => $categoryLabel,
                 "category_group" => $groupLabel,
                 "stock" => (int)$p['stock'],
                 "warning_level" => (int)$p['warning_level'],
                 "is_hot" => (int)$p['is_hot'],
-                "hot_order" => (int)$p['hot_order']
+                "hot_order" => (int)$p['hot_order'],
+                "image_url" => productImageUrl($p['image_url'] ?? '')
             ];
 
             // 用 sku 做 key，方便 dashboard merge
