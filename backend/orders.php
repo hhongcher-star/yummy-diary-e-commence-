@@ -35,6 +35,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_payment_id']))
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    foreach (['mark_paid_id', 'mark_unpaid_id', 'archive_order_id', 'delete_order_id'] as $singleAction) {
+        if (!isset($_POST[$singleAction])) {
+            continue;
+        }
+
+        $singleOrderId = (int)$_POST[$singleAction];
+        if ($singleOrderId <= 0) {
+            break;
+        }
+
+        $_POST['order_ids'] = [$singleOrderId];
+        if ($singleAction === 'mark_paid_id') {
+            $_POST['mark_paid'] = '1';
+        } elseif ($singleAction === 'mark_unpaid_id') {
+            $_POST['mark_unpaid'] = '1';
+        } elseif ($singleAction === 'archive_order_id') {
+            $_POST['archive_selected'] = '1';
+        } elseif ($singleAction === 'delete_order_id') {
+            $_POST['delete_selected'] = '1';
+        }
+        break;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_ids'])) {
     $ids = array_values(array_filter(array_map('intval', $_POST['order_ids'])));
 
@@ -281,14 +306,6 @@ foreach ($orders as $order) {
     min-width:220px;
   }
 
-  .batch-actions{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    align-items:center;
-    margin-bottom:14px;
-  }
-
   .orders-table td{
     vertical-align:middle;
   }
@@ -356,6 +373,21 @@ foreach ($orders as $order) {
     min-width:92px;
   }
 
+  .row-actions{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    min-width:330px;
+  }
+
+  .row-actions .btn,
+  .row-actions .status-badge{
+    min-height:42px;
+    padding:9px 12px;
+  }
+
   .pagination{
     display:flex;
     flex-wrap:wrap;
@@ -397,12 +429,15 @@ foreach ($orders as $order) {
       min-width:100%;
     }
 
-    .batch-actions{
-      flex-direction:column;
-      align-items:stretch;
+    .row-actions{
+      min-width:0;
+      justify-content:flex-start;
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
     }
 
-    .batch-actions .btn{
+    .row-actions .btn,
+    .row-actions .status-badge{
       width:100%;
     }
   }
@@ -417,7 +452,7 @@ foreach ($orders as $order) {
   function confirmBatchAction(event) {
     const submitter = event.submitter;
 
-    if (submitter && submitter.name === "toggle_payment_id") {
+    if (submitter && ["toggle_payment_id", "mark_paid_id", "mark_unpaid_id", "archive_order_id", "delete_order_id"].includes(submitter.name)) {
       return true;
     }
 
@@ -503,13 +538,6 @@ foreach ($orders as $order) {
     <input type="hidden" name="current_page" value="<?= $page ?>">
     <input type="hidden" name="current_search" value="<?= htmlspecialchars($search) ?>">
     <input type="hidden" name="current_month" value="<?= htmlspecialchars($month) ?>">
-    <div class="batch-actions">
-      <button type="submit" name="mark_paid" value="1" class="btn btn-edit">标记已付款</button>
-      <button type="submit" name="mark_unpaid" value="1" class="btn btn-move">标记未付款</button>
-      <button type="submit" name="archive_selected" value="1" class="btn btn-delete">归档选中订单</button>
-      <button type="submit" name="delete_selected" value="1" class="btn btn-delete">永久删除选中收据</button>
-    </div>
-
     <div class="table-wrapper">
       <table class="orders-table">
         <tr>
@@ -520,7 +548,7 @@ foreach ($orders as $order) {
           <th>下单时间</th>
           <th>总金额</th>
           <th>付款状态</th>
-          <th>查看收据</th>
+          <th>操作</th>
         </tr>
 
         <?php if(empty($orders)): ?>
@@ -577,30 +605,54 @@ foreach ($orders as $order) {
 
             <td>
               <?php if ($o['status'] === 'paid'): ?>
-                <button type="submit"
-                        name="toggle_payment_id"
-                        value="<?= (int)$o['id'] ?>"
-                        class="status-badge status-paid"
-                        onclick="return confirm('确定改为未付款吗？')">
+                <span class="status-badge status-paid">
                   ✅ 已付款
-                </button>
+                </span>
               <?php else: ?>
-                <button type="submit"
-                        name="toggle_payment_id"
-                        value="<?= (int)$o['id'] ?>"
-                        class="status-badge status-pending"
-                        onclick="return confirm('确定改为已付款吗？')">
+                <span class="status-badge status-pending">
                   ❌ 未付款
-                </button>
+                </span>
               <?php endif; ?>
             </td>
 
             <td>
-              <a href="../frontend/receipt.php?order_number=<?= urlencode($o['order_number']) ?>&token=admin"
-                 target="_blank"
-                 class="btn btn-move receipt-btn">
-                 🧾 收据
-              </a>
+              <div class="row-actions">
+                <?php if ($o['status'] === 'paid'): ?>
+                  <button type="submit"
+                          name="mark_unpaid_id"
+                          value="<?= (int)$o['id'] ?>"
+                          class="btn btn-move"
+                          onclick="return confirm('确定改为未付款吗？')">
+                    未付款
+                  </button>
+                <?php else: ?>
+                  <button type="submit"
+                          name="mark_paid_id"
+                          value="<?= (int)$o['id'] ?>"
+                          class="btn btn-edit"
+                          onclick="return confirm('确定改为已付款吗？')">
+                    已付款
+                  </button>
+                <?php endif; ?>
+                <button type="submit"
+                        name="archive_order_id"
+                        value="<?= (int)$o['id'] ?>"
+                        class="btn btn-delete">
+                  归档
+                </button>
+                <button type="submit"
+                        name="delete_order_id"
+                        value="<?= (int)$o['id'] ?>"
+                        class="btn btn-delete"
+                        onclick="return confirm('确定要永久删除这笔订单吗？此操作不可恢复！')">
+                  删除
+                </button>
+                <a href="../frontend/receipt.php?order_number=<?= urlencode($o['order_number']) ?>&token=admin"
+                   target="_blank"
+                   class="btn btn-move receipt-btn">
+                   🧾 收据
+                </a>
+              </div>
             </td>
           </tr>
         <?php endforeach; ?>
