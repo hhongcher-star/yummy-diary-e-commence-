@@ -100,7 +100,7 @@ if ($q !== '') {
             <?php if ((int)$p['display_stock'] <= 0): ?>
               <div class="soldout-tag">SOLD OUT</div>
             <?php endif; ?>
-            <img src="/yummy-diary/<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
+            <img src="<?= htmlspecialchars(productImageUrl($p['image_url']), ENT_QUOTES) ?>" onerror="this.onerror=null;this.src='<?= htmlspecialchars(productImageUrl(null), ENT_QUOTES) ?>';" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
             <div class="product-text">
               <h4>[<?= htmlspecialchars($p['sku'], ENT_QUOTES) ?>] <?= htmlspecialchars($p['name'], ENT_QUOTES) ?></h4>
               <p>库存：<?= (int)$p['display_stock'] ?></p>

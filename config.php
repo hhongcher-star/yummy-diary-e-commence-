@@ -60,6 +60,10 @@ function productImageUrl(?string $value): string
         $path = 'frontend/' . $path;
     }
 
+    if (str_starts_with($path, 'frontend/uploads/')) {
+        return appUrl('frontend/upload_file.php?file=' . rawurlencode(basename($path)));
+    }
+
     return appUrl($path !== '' ? $path : 'images/soldout.png');
 }
 
