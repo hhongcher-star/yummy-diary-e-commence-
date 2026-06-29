@@ -96,7 +96,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
               <?php if ($displayStock <= 0): ?>
                 <div class="soldout-tag">SOLD OUT</div>
               <?php endif; ?>
-              <img src="<?= htmlspecialchars(productImageUrl($p['image_url']), ENT_QUOTES) ?>" onerror="this.onerror=null;this.src='<?= htmlspecialchars(productImageUrl(null), ENT_QUOTES) ?>';" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
+              <img src="/yummy-diary/<?= htmlspecialchars($p['image_url'], ENT_QUOTES) ?>" onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';" alt="<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>">
               <div class="product-text">
                 <h4><?= htmlspecialchars($p['name'], ENT_QUOTES) ?></h4>
                 <?php if (!empty($p['sku'])): ?>
@@ -1275,11 +1275,6 @@ body.sort-admin-mode .sort-drag-handle {
 
       if (path.startsWith("uploads/")) {
         path = "frontend/" + path;
-      }
-
-      if (path.startsWith("frontend/uploads/")) {
-        const file = path.split("/").pop() || "";
-        return <?= json_encode(appUrl('frontend/upload_file.php')) ?> + "?file=" + encodeURIComponent(file);
       }
 
       return <?= json_encode(appUrl()) ?> + (path || "images/soldout.png");

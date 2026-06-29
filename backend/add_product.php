@@ -36,8 +36,15 @@ function uploadProductImage(string $field, ?int $index = null): ?string {
     if ($size > 2 * 1024 * 1024) {
         throw new RuntimeException('图片大小不能超过 2MB。');
     }
+    $dir = __DIR__ . '/../frontend/uploads/';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+        throw new RuntimeException('Unable to create product upload directory.');
+    }
     $name = uniqid('', true) . '.' . $allowed[$type];
-    return moveProductUpload($tmp, $name);
+    if (!move_uploaded_file($tmp, $dir . $name)) {
+        throw new RuntimeException('Unable to save uploaded product image.');
+    }
+    return 'frontend/uploads/' . $name;
 }
 
 $error = '';

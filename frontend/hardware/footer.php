@@ -444,7 +444,7 @@ function safeImagePath(value){
 
   const path=String(value ?? "").replaceAll("\\","/");
 
-  return /^[a-zA-Z0-9/_\-. ?=&%]+$/.test(path)
+  return /^[a-zA-Z0-9/_\-. ]+$/.test(path)
     ? path
     : "images/soldout.png";
 }
@@ -628,7 +628,7 @@ function updateCartUI(data){
       <li class="cart-item" data-sku="${sku}">
 
         <img
-          src="${image}"
+          src="/yummy-diary/${image}"
           onerror="this.onerror=null;this.src='/yummy-diary/images/soldout.png';"
           alt="${name}"
           class="cart-thumb"

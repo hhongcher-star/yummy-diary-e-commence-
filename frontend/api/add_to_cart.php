@@ -179,7 +179,7 @@ switch ($mode) {
                 'cart_key' => $cartKey,
                 'name'  => $product['name'] . ($variant ? ' · ' . $variant['variant_name'] : ''),
                 'price' => (float)($variant['price'] ?? $product['price']),
-                'img'   => productImageUrl(($variant['image_url'] ?? null) ?: $product['image_url']),
+                'img'   => ($variant['image_url'] ?? null) ?: $product['image_url'],
                 'qty'   => 1
             ];
         }

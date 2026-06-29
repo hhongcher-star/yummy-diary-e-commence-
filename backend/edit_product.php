@@ -114,7 +114,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new RuntimeException('图片大小不能超过 2MB。');
         }
         $filename = uniqid('', true) . "." . $allowed[$mime];
-        $image_url = moveProductUpload($_FILES['image']['tmp_name'], $filename);
+        $targetDir = __DIR__ . "/../frontend/uploads/";
+        if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
+            throw new RuntimeException('Unable to create product upload directory.');
+        }
+        $target = $targetDir . $filename;
+        if (!move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
+            throw new RuntimeException('Unable to save uploaded product image.');
+        }
+        $image_url = "frontend/uploads/" . $filename;
     }
 
     // 更新数据库
@@ -185,7 +193,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new RuntimeException('分类项目图片大小不能超过 2MB。');
                 }
                 $filename = uniqid('', true) . '.' . $allowed[$mime];
-                $variantImage = moveProductUpload($tmp, $filename);
+                if (!move_uploaded_file($tmp, __DIR__ . '/../frontend/uploads/' . $filename)) {
+                    throw new RuntimeException('Unable to save uploaded variant image.');
+                }
+                $variantImage = 'frontend/uploads/' . $filename;
             }
             $insertVariant = $pdo->prepare('INSERT INTO product_variants
               (product_id,source_product_id,variant_name,sku,price,stock,image_url,sort_order) VALUES (?,?,?,?,?,?,?,?)');

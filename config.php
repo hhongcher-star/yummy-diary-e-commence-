@@ -60,44 +60,7 @@ function productImageUrl(?string $value): string
         $path = 'frontend/' . $path;
     }
 
-    if (str_starts_with($path, 'frontend/uploads/')) {
-        return appUrl('frontend/upload_file.php?file=' . rawurlencode(basename($path)));
-    }
-
     return appUrl($path !== '' ? $path : 'images/soldout.png');
-}
-
-function productUploadStoragePath(string $filename = ''): string
-{
-    $baseDir = trim((string)(getenv('UPLOAD_STORAGE_DIR') ?: ''));
-    if ($baseDir === '') {
-        $baseDir = dirname(__DIR__) . '/yummy_uploads';
-    }
-
-    $baseDir = rtrim(str_replace('\\', '/', $baseDir), '/');
-    $filename = trim(str_replace('\\', '/', $filename), '/');
-
-    return $filename === '' ? $baseDir : $baseDir . '/' . basename($filename);
-}
-
-function productUploadPublicPath(string $filename): string
-{
-    return 'frontend/uploads/' . basename($filename);
-}
-
-function moveProductUpload(string $tmpPath, string $filename): string
-{
-    $targetDir = productUploadStoragePath();
-    if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
-        throw new RuntimeException('Unable to create product upload storage directory.');
-    }
-
-    $targetPath = productUploadStoragePath($filename);
-    if (!move_uploaded_file($tmpPath, $targetPath)) {
-        throw new RuntimeException('Unable to save uploaded product image.');
-    }
-
-    return productUploadPublicPath($filename);
 }
 
 $appEnvironment = getenv('APP_ENV') ?: 'production';
