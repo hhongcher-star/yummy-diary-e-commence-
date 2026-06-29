@@ -20,6 +20,7 @@ function loadLocalEnvironment(string $path): void
     }
 }
 
+loadLocalEnvironment(dirname(__DIR__) . '/.env');
 loadLocalEnvironment(__DIR__ . '/.env');
 
 function appBasePath(): string
