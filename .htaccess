@@ -1,4 +1,7 @@
 RewriteEngine On
+# Serve product uploads from persistent storage outside Git deployments.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^frontend/uploads/([^/]+)$ frontend/upload_file.php?file=$1 [L,QSA]
 DirectoryIndex index.php
 
 # 旧资源路径继续兼容

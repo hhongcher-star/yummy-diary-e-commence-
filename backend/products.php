@@ -269,12 +269,7 @@ function uploadImage($fileInput) {
         $mime = $finfo->file($_FILES[$fileInput]['tmp_name']);
         if (!isset($allowed[$mime])) return null;
         $filename = bin2hex(random_bytes(16)) . "." . $allowed[$mime];
-        $targetDir = __DIR__ . "/../frontend/uploads/";
-        if (!is_dir($targetDir)) mkdir($targetDir,0755,true);
-        $target = $targetDir.$filename;
-        if (move_uploaded_file($_FILES[$fileInput]['tmp_name'],$target)) {
-            return "frontend/uploads/" . $filename;
-        }
+        return moveProductUpload($_FILES[$fileInput]['tmp_name'], $filename);
     }
     return null;
 }
