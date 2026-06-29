@@ -309,6 +309,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
   object-fit: cover;
   border-radius: 8px;
   border: 1px solid #eee;
+  cursor: zoom-in;
 }
 
 .soldout-tag {
@@ -456,6 +457,47 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
   object-fit: cover;
   border-radius: 15px;
   border: 1px solid #eee;
+  cursor: zoom-in;
+}
+
+.product-image-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  box-sizing: border-box;
+  background: rgba(0,0,0,.86);
+}
+
+.product-image-preview.show {
+  display: flex;
+}
+
+.product-image-preview img {
+  max-width: 94vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff;
+  cursor: zoom-out;
+}
+
+.product-image-preview button {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .variant-product h3 {
@@ -923,6 +965,11 @@ body.sort-admin-mode .sort-drag-handle {
     <?php include __DIR__ . '/hardware/footer.php'; ?>
   </div>
 
+  <div id="productImagePreview" class="product-image-preview" role="dialog" aria-modal="true" aria-label="商品图片放大预览">
+    <button type="button" id="closeProductImagePreview" aria-label="关闭">&times;</button>
+    <img id="productImagePreviewImg" src="" alt="">
+  </div>
+
   <!-- Loader 动画控制 -->
   <script>
     window.addEventListener("load", () => {
@@ -938,6 +985,32 @@ body.sort-admin-mode .sort-drag-handle {
     });
 
     document.addEventListener("DOMContentLoaded", () => {
+      const productImagePreview = document.getElementById("productImagePreview");
+      const productImagePreviewImg = document.getElementById("productImagePreviewImg");
+      const closeProductImagePreview = () => {
+        productImagePreview.classList.remove("show");
+        productImagePreviewImg.src = "";
+        document.body.style.overflow = "";
+      };
+
+      document.body.addEventListener("click", event => {
+        const image = event.target.closest(".product-info img, .variant-product img");
+        if (!image) return;
+        event.preventDefault();
+        event.stopPropagation();
+        productImagePreviewImg.src = image.currentSrc || image.src;
+        productImagePreviewImg.alt = image.alt || "商品图片";
+        productImagePreview.classList.add("show");
+        document.body.style.overflow = "hidden";
+      });
+
+      document.getElementById("closeProductImagePreview").addEventListener("click", closeProductImagePreview);
+      productImagePreview.addEventListener("click", event => {
+        if (event.target === productImagePreview || event.target === productImagePreviewImg) {
+          closeProductImagePreview();
+        }
+      });
+
       // ✅ AJAX 分类切换
       document.querySelectorAll(".cat-link").forEach(link => {
         link.addEventListener("click", e => {

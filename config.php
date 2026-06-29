@@ -85,11 +85,11 @@ if ($isApiRequest) {
     });
 }
 
-$host = 'localhost';
-$port = '3306';
-$database = 'u751690829_yummy';
-$username = 'u751690829_yummy';
-$password = 'Hong63@511';
+$host = getenv('DB_HOST') ?: 'localhost';
+$port = getenv('DB_PORT') ?: '3306';
+$database = getenv('DB_NAME') ?: '';
+$username = getenv('DB_USER') ?: '';
+$password = getenv('DB_PASSWORD') ?: '';
 $dsn = sprintf(
     'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
     $host,

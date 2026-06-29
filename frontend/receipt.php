@@ -27,7 +27,15 @@ if (!$order) {
     die("❌ 找不到订单，请返回重新下单。");
 }
 
-$stmt_items = $pdo->prepare("SELECT * FROM order_items WHERE order_id=?");
+$stmt_items = $pdo->prepare(
+    "SELECT oi.*,
+            COALESCE(pv.image_url, p.image_url) AS item_image_url
+     FROM order_items oi
+     LEFT JOIN products p ON p.id = oi.product_id
+     LEFT JOIN product_variants pv ON pv.product_id = oi.product_id AND pv.sku = oi.sku
+     WHERE oi.order_id=?
+     ORDER BY oi.id"
+);
 $stmt_items->execute([$order['id']]);
 $items = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
 
@@ -45,7 +53,8 @@ foreach ($items as $it) {
         "sku"   => $it['sku'] ?? '',
         "name"  => $it['product_name'],
         "qty"   => (int)$it['quantity'],
-        "price" => (float)$it['price']
+        "price" => (float)$it['price'],
+        "image" => $it['item_image_url'] ?? ''
     ];
 }
 
@@ -155,6 +164,23 @@ th,td{
 
 th{
   background:#f5f5f5;
+}
+
+.receipt-product{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  text-align:left;
+}
+
+.receipt-product img{
+  width:46px;
+  height:46px;
+  flex:0 0 46px;
+  object-fit:cover;
+  border:1px solid #eee;
+  border-radius:8px;
+  background:#fff;
 }
 
 .total{
@@ -360,6 +386,16 @@ th{
     padding:6px;
   }
 
+  .receipt-product{
+    gap:7px;
+  }
+
+  .receipt-product img{
+    width:38px;
+    height:38px;
+    flex-basis:38px;
+  }
+
   .btn-row{
     gap:8px;
   }
@@ -398,6 +434,7 @@ th{
   <table>
     <tr>
       <th>数量</th>
+      <th>照片</th>
       <th>商品</th>
       <th>单价 (RM)</th>
       <th>小计 (RM)</th>
@@ -410,6 +447,12 @@ th{
       ?>
       <tr>
         <td><?= (int)$item['qty'] ?></td>
+        <td>
+          <img src="<?= htmlspecialchars(productImageUrl($item['image']), ENT_QUOTES) ?>"
+               alt="<?= htmlspecialchars($item['name'], ENT_QUOTES) ?>"
+               style="width:46px;height:46px;object-fit:cover;border:1px solid #eee;border-radius:8px;background:#fff;"
+               onerror="this.onerror=null;this.src='<?= htmlspecialchars(productImageUrl(null), ENT_QUOTES) ?>';">
+        </td>
         <td><?= $skuLabel . htmlspecialchars($item['name']) ?></td>
         <td><?= number_format($item['price'], 2) ?></td>
         <td><?= number_format($subtotal, 2) ?></td>
@@ -419,6 +462,7 @@ th{
     <?php foreach ($gifts as $gift): ?>
       <tr>
         <td>1</td>
+        <td></td>
         <td>[赠] <?= htmlspecialchars($gift) ?></td>
         <td>0.00</td>
         <td>0.00</td>
@@ -426,7 +470,7 @@ th{
     <?php endforeach; ?>
 
     <tr>
-      <td colspan="3" style="text-align:right;">运费</td>
+      <td colspan="4" style="text-align:right;">运费</td>
       <td><?= number_format($shipping_cost, 2) ?></td>
     </tr>
   </table>
