@@ -1,4 +1,5 @@
 <?php
+// å•†å“ç®¡ç†é¡µï¼šæŸ¥çœ‹å•†å“åˆ—è¡¨ï¼Œå¹¶æä¾›æ–°å¢žã€ç¼–è¾‘ã€åˆ é™¤ç­‰åŽå°ç®¡ç†å…¥å£ã€‚
 require __DIR__ . '/auth_admin.php';
 require __DIR__ . '/../config.php';
 date_default_timezone_set("Asia/Kuala_Lumpur");
@@ -56,7 +57,7 @@ if ($selectedCat !== '' && !isset($categories[$selectedCat])) {
 $cat = $selectedCat;
 
 // ====================
-// 新增大分类
+// æ–°å¢žå¤§åˆ†ç±»
 // ====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_group'])) {
     $group_key = strtolower(trim($_POST['group_key']));
@@ -71,13 +72,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_group'])) {
         $stmt = $pdo->prepare("INSERT INTO category_groups (group_key, label, sort_order, status) VALUES (?, ?, ?, 1)");
         $stmt->execute([$group_key, $label, $sort_order]);
 
-        header("Location: products.php?msg=" . urlencode("✅ 大分类已添加"));
+        header("Location: products.php?msg=" . urlencode("âœ… å¤§åˆ†ç±»å·²æ·»åŠ "));
         exit;
     }
 }
 
 // ====================
-// 新增小分类
+// æ–°å¢žå°åˆ†ç±»
 // ====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_category'])) {
     $group_id = intval($_POST['group_id']);
@@ -94,13 +95,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_category'])) {
         $stmt = $pdo->prepare("INSERT INTO product_categories (group_id, category_key, name, sort_order, status) VALUES (?, ?, ?, ?, 1)");
         $stmt->execute([$group_id, $category_key, $name, $sort_order]);
 
-        header("Location: products.php?msg=" . urlencode("✅ 小分类已添加"));
+        header("Location: products.php?msg=" . urlencode("âœ… å°åˆ†ç±»å·²æ·»åŠ "));
         exit;
     }
 }
 
 // ====================
-// 删除小分类
+// åˆ é™¤å°åˆ†ç±»
 // ====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_group'])) {
     $groupId = (int)($_POST['group_id'] ?? 0);
@@ -109,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_group'])) {
     if ($groupId > 0 && $label !== '') {
         $stmt = $pdo->prepare("UPDATE category_groups SET label=? WHERE id=?");
         $stmt->execute([$label, $groupId]);
-        header("Location: products.php?open_category=1&alert=" . urlencode("大分类名称已修改"));
+        header("Location: products.php?open_category=1&alert=" . urlencode("å¤§åˆ†ç±»åç§°å·²ä¿®æ”¹"));
         exit;
     }
 }
@@ -121,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
     if ($categoryId > 0 && $name !== '') {
         $stmt = $pdo->prepare("UPDATE product_categories SET name=? WHERE id=?");
         $stmt->execute([$name, $categoryId]);
-        header("Location: products.php?open_category=1&alert=" . urlencode("小分类名称已修改"));
+        header("Location: products.php?open_category=1&alert=" . urlencode("å°åˆ†ç±»åç§°å·²ä¿®æ”¹"));
         exit;
     }
 }
@@ -134,19 +135,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_category'])) {
     $usedCount = (int)$stmt->fetchColumn();
 
     if ($usedCount > 0) {
-        header("Location: products.php?open_category=1&alert=" . urlencode("这个小分类还有商品，不能删除。请先把商品移去其他分类或删除商品。"));
+        header("Location: products.php?open_category=1&alert=" . urlencode("è¿™ä¸ªå°åˆ†ç±»è¿˜æœ‰å•†å“ï¼Œä¸èƒ½åˆ é™¤ã€‚è¯·å…ˆæŠŠå•†å“ç§»åŽ»å…¶ä»–åˆ†ç±»æˆ–åˆ é™¤å•†å“ã€‚"));
         exit;
     }
 
     $stmt = $pdo->prepare("DELETE FROM product_categories WHERE category_key=?");
     $stmt->execute([$category_key]);
 
-    header("Location: products.php?open_category=1&alert=" . urlencode("小分类已删除"));
+    header("Location: products.php?open_category=1&alert=" . urlencode("å°åˆ†ç±»å·²åˆ é™¤"));
     exit;
 }
 
 // ====================
-// 删除大分类
+// åˆ é™¤å¤§åˆ†ç±»
 // ====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_group'])) {
     $group_id = intval($_POST['group_id']);
@@ -156,14 +157,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_group'])) {
     $catCount = (int)$stmt->fetchColumn();
 
     if ($catCount > 0) {
-        header("Location: products.php?open_category=1&alert=" . urlencode("这个大分类下面还有小分类，不能删除。请先删除里面的小分类。"));
+        header("Location: products.php?open_category=1&alert=" . urlencode("è¿™ä¸ªå¤§åˆ†ç±»ä¸‹é¢è¿˜æœ‰å°åˆ†ç±»ï¼Œä¸èƒ½åˆ é™¤ã€‚è¯·å…ˆåˆ é™¤é‡Œé¢çš„å°åˆ†ç±»ã€‚"));
         exit;
     }
 
     $stmt = $pdo->prepare("DELETE FROM category_groups WHERE id=?");
     $stmt->execute([$group_id]);
 
-    header("Location: products.php?open_category=1&alert=" . urlencode("大分类已删除"));
+    header("Location: products.php?open_category=1&alert=" . urlencode("å¤§åˆ†ç±»å·²åˆ é™¤"));
     exit;
 }
 
@@ -254,7 +255,7 @@ $categorySortStmt = $pdo->query(
 $categoriesForSort = $categorySortStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // ====================
-// 上传图片函数
+// ä¸Šä¼ å›¾ç‰‡å‡½æ•°
 // ====================
 function uploadImage($fileInput) {
     if (isset($_FILES[$fileInput]) && $_FILES[$fileInput]['error'] === UPLOAD_ERR_OK) {
@@ -280,10 +281,10 @@ function uploadImage($fileInput) {
 }
 
 // ====================
-// 添加商品（自动排最后）
+// æ·»åŠ å•†å“ï¼ˆè‡ªåŠ¨æŽ’æœ€åŽï¼‰
 // ====================
 // ====================
-// 更新 is_hot（🔥最重要）
+// æ›´æ–° is_hotï¼ˆðŸ”¥æœ€é‡è¦ï¼‰
 // ====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_hot'], $_POST['id'])) {
 
@@ -292,23 +293,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_hot'], $_POST[
 
     if ($is_hot) {
 
-        // 🔥 Find the current maximum hot_order
+        // ðŸ”¥ Find the current maximum hot_order
         $stmt = $pdo->query("SELECT MAX(hot_order) FROM products WHERE is_hot=1 AND parent_product_id IS NULL");
         $max = $stmt->fetchColumn();
         $new_order = $max ? $max + 1 : 1;
 
-        // 🔥 Assign hot_order
+        // ðŸ”¥ Assign hot_order
         $stmt = $pdo->prepare("UPDATE products SET is_hot=1, hot_order=? WHERE id=?");
         $stmt->execute([$new_order, $id]);
 
     } else {
 
-        // ❌ Remove from hot products
+        // âŒ Remove from hot products
         $stmt = $pdo->prepare("UPDATE products SET is_hot=0, hot_order=0 WHERE id=?");
         $stmt->execute([$id]);
     }
 
-    // 🔥 Handle AJAX requests
+    // ðŸ”¥ Handle AJAX requests
     if (isset($_GET['ajax'])) {
         echo json_encode(['status' => 'ok']);
         exit;
@@ -319,7 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_hot'], $_POST[
 }
 
 // ====================
-// 🔥 热销排序
+// ðŸ”¥ çƒ­é”€æŽ’åº
 // ====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hot_move'], $_POST['id'])) {
   header('Content-Type: application/json');
@@ -366,7 +367,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hot_move'], $_POST['i
     }
 
     // ====================
-    // 🔥 重新整理 hot_order
+    // ðŸ”¥ é‡æ–°æ•´ç† hot_order
     // ====================
     $stmt = $pdo->query("SELECT id FROM products WHERE is_hot=1 AND parent_product_id IS NULL ORDER BY hot_order ASC");
     $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -376,7 +377,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hot_move'], $_POST['i
             ->execute([$i+1, $pid]);
     }
 
-    // 🔥 回传最新数据
+    // ðŸ”¥ å›žä¼ æœ€æ–°æ•°æ®
     $stmt = $pdo->query("SELECT id,name,price,image_url,hot_order FROM products WHERE is_hot=1 AND parent_product_id IS NULL ORDER BY hot_order ASC");
 
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -384,7 +385,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hot_move'], $_POST['i
 }
 
 // ====================
-// 删除商品
+// åˆ é™¤å•†å“
 // ====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_product'])) {
     $id=intval($_POST['delete_product']);
@@ -400,12 +401,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_product'])) {
         }
         throw $e;
     }
-    header("Location: products.php?cat=" . urlencode($cat) . "&msg=" . urlencode("❌ 商品已删除"));
+    header("Location: products.php?cat=" . urlencode($cat) . "&msg=" . urlencode("âŒ å•†å“å·²åˆ é™¤"));
     exit;
 }
 
 // ====================
-// 上下移动排序
+// ä¸Šä¸‹ç§»åŠ¨æŽ’åº
 // ====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move'],$_POST['id'])) {
     $id=intval($_POST['id']);
@@ -448,7 +449,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move'],$_POST['id']))
 }
 
 // ====================
-// 重新整理排序（保证连续）
+// é‡æ–°æ•´ç†æŽ’åºï¼ˆä¿è¯è¿žç»­ï¼‰
 // ====================
 if ($selectedCat !== '') {
     $stmt = $pdo->prepare("SELECT id FROM products WHERE category=? AND parent_product_id IS NULL ORDER BY sort_order ASC,id ASC");
@@ -461,7 +462,7 @@ if ($selectedCat !== '') {
 }
 
 // ====================
-// 查询商品
+// æŸ¥è¯¢å•†å“
 // ====================
 if ($selectedCat !== '') {
     $stmt = $pdo->prepare("SELECT * FROM products WHERE category=? AND parent_product_id IS NULL ORDER BY sort_order ASC,id DESC");
@@ -491,66 +492,11 @@ $openSort = $_GET['open_sort'] ?? '';
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>商品管理</title>
+<title>å•†å“ç®¡ç†</title>
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <link rel="stylesheet" href="/yummy-diary/backend/css/admin_layout.css">
 <style>
-  .table-wrapper{overflow-x:auto;}
-  .page-header{display:flex;justify-content:space-between;align-items:center;gap:16px;}
-  .page-header .page-title{flex:1;}
-  .page-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
-  .category-modal{display:none;position:fixed;inset:0;background:rgba(40,30,20,.35);z-index:999;padding:30px;overflow:auto;}
-  .category-modal.show{display:block;}
-  .category-modal-content{max-width:980px;margin:40px auto;background:#fff;border-radius:28px;padding:24px;box-shadow:0 25px 70px rgba(80,50,30,.22);}
-  .category-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
-  .category-modal-header h3{margin:0;}
-  .modal-close{width:42px;height:42px;border-radius:50%;font-size:24px;background:#fffaf4;color:var(--text);}
-  .category-manage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;}
-  .category-mini-form{background:#fffaf4;border:1px solid var(--line);border-radius:22px;padding:18px;display:grid;gap:12px;}
-  .delete-category-area{margin-top:20px;}
-  .delete-split-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;}
-  .delete-panel{background:#fffaf4;border:1px solid var(--line);border-radius:22px;padding:18px;}
-  .delete-panel h4{margin:0 0 14px;color:var(--text);}
-  .delete-list{display:grid;gap:10px;max-height:430px;overflow:auto;padding-right:4px;}
-  .delete-row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;}
-  .delete-row span{font-weight:700;color:var(--text);}
-  .delete-row small{color:var(--muted);font-weight:600;}
-  .category-rename-form{display:grid;grid-template-columns:minmax(110px,1fr) auto;align-items:center;gap:8px;flex:1;}
-  .category-rename-form small{grid-column:1/-1;}
-  .category-rename-form input[type="text"]{min-width:0;width:100%;}
-  @media(max-width:700px){
-    .delete-row{align-items:stretch;flex-direction:column;}
-    .category-rename-form{grid-template-columns:1fr;}
-    .category-rename-form small{grid-column:auto;}
-  }
-  .sort-section{display:grid;gap:18px;}
-  .sort-panel{background:#fffaf4;border:1px solid var(--line);border-radius:22px;padding:18px;}
-  .sort-panel h4{margin:0 0 14px;color:var(--text);}
-  .sort-list{display:grid;gap:10px;}
-  .sort-row{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:11px 14px;}
-  .sort-position{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--soft);font-weight:800;}
-  .sort-name{display:grid;gap:2px;font-weight:800;color:var(--text);}
-  .sort-name small{color:var(--muted);font-weight:600;}
-  .sort-controls{display:flex;gap:7px;}
-  .sort-controls form{display:inline;}
-  .sort-controls button{min-width:44px;padding:9px 12px;}
-  .sort-group{display:grid;gap:10px;}
-  .sort-children{display:grid;gap:8px;padding-left:22px;border-left:3px solid var(--soft);}
-  .site-dialog{display:none;position:fixed;inset:0;z-index:1200;background:rgba(40,30,20,.42);padding:20px;align-items:center;justify-content:center;}
-  .site-dialog.show{display:flex;}
-  .site-dialog-card{width:min(430px,100%);background:#fff;border:1px solid var(--line);border-radius:26px;padding:26px;box-shadow:0 24px 70px rgba(80,50,30,.25);}
-  .site-dialog-icon{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;margin-bottom:16px;background:var(--soft);color:#7a5a2d;font-size:24px;font-weight:800;}
-  .site-dialog-card h3{margin:0 0 10px;color:var(--text);}
-  .site-dialog-card p{margin:0;color:var(--muted);line-height:1.65;white-space:pre-line;}
-  .site-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;}
-  body.dialog-open{overflow:hidden;}
-  @media(max-width:900px){.delete-split-grid{grid-template-columns:1fr;}}
-  @media(max-width:768px){
-    .page-header{flex-wrap:wrap;}
-    .page-actions{display:grid;grid-template-columns:1fr 1fr;}
-    .sort-row{grid-template-columns:42px minmax(0,1fr);}
-    .sort-controls{grid-column:1 / -1;justify-content:flex-end;}
-  }
+<?php include __DIR__ . '/assets/css/products.css'; ?>
 </style>
 </head>
 <body>
@@ -560,19 +506,19 @@ $openSort = $_GET['open_sort'] ?? '';
 <main>
   <section class="page-header">
     <div class="page-title">
-      <h2>商品管理</h2>
-      <p>管理店铺商品、价格、库存和热销状态</p>
+      <h2>å•†å“ç®¡ç†</h2>
+      <p>ç®¡ç†åº—é“ºå•†å“ã€ä»·æ ¼ã€åº“å­˜å’Œçƒ­é”€çŠ¶æ€</p>
     </div>
     <div class="page-actions">
-      <a href="add_product.php" class="btn btn-edit">➕ 新增商品</a>
-      <button type="button" class="btn btn-edit" onclick="openCategoryModal()">➕ 分类管理</button>
-      <button type="button" class="btn btn-move" onclick="openSortModal()">↕ 分类排序</button>
+      <a href="add_product.php" class="btn btn-edit">âž• æ–°å¢žå•†å“</a>
+      <button type="button" class="btn btn-edit" onclick="openCategoryModal()">âž• åˆ†ç±»ç®¡ç†</button>
+      <button type="button" class="btn btn-move" onclick="openSortModal()">â†• åˆ†ç±»æŽ’åº</button>
     </div>
   </section>
 
   <form class="category-filter" method="get">
     <select id="groupSelect" name="group">
-      <option value="">全部大分类</option>
+      <option value="">å…¨éƒ¨å¤§åˆ†ç±»</option>
       <?php foreach ($categoryGroups as $groupKey => $group): ?>
         <option value="<?= htmlspecialchars($groupKey) ?>" <?= (isset($_GET['group']) && $_GET['group'] === $groupKey) ? 'selected' : '' ?>>
           <?= htmlspecialchars($group['label']) ?>
@@ -581,7 +527,7 @@ $openSort = $_GET['open_sort'] ?? '';
     </select>
 
     <select id="catSelect" name="cat">
-      <option value="">全部小分类</option>
+      <option value="">å…¨éƒ¨å°åˆ†ç±»</option>
       <?php foreach ($categoryGroups as $groupKey => $group): ?>
         <?php foreach ($group['children'] as $key => $label): ?>
           <option value="<?= htmlspecialchars($key) ?>" data-group="<?= htmlspecialchars($groupKey) ?>" <?= ($cat === $key) ? 'selected' : '' ?>>
@@ -591,47 +537,47 @@ $openSort = $_GET['open_sort'] ?? '';
       <?php endforeach; ?>
     </select>
 
-    <button type="submit" class="btn btn-edit">筛选</button>
-    <a href="products.php" class="btn btn-move">重置</a>
+    <button type="submit" class="btn btn-edit">ç­›é€‰</button>
+    <a href="products.php" class="btn btn-move">é‡ç½®</a>
   </form>
 
-  <div id="categoryModal" class="category-modal" role="dialog" aria-modal="true" aria-label="分类管理">
+  <div id="categoryModal" class="category-modal" role="dialog" aria-modal="true" aria-label="åˆ†ç±»ç®¡ç†">
     <div class="category-modal-content">
       <div class="category-modal-header">
-        <h3>分类管理</h3>
-        <button type="button" class="modal-close btn" onclick="closeCategoryModal()" aria-label="关闭">×</button>
+        <h3>åˆ†ç±»ç®¡ç†</h3>
+        <button type="button" class="modal-close btn" onclick="closeCategoryModal()" aria-label="å…³é—­">Ã—</button>
       </div>
 
       <div class="category-manage-grid">
         <form class="category-mini-form" method="post">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-          <h4>新增大分类</h4>
-          <input type="text" name="group_key" placeholder="例如: drinks" required>
-          <input type="text" name="group_label" placeholder="例如: 饮料" required>
-          <button type="submit" name="add_group" value="1" class="btn btn-edit">➕ 添加大分类</button>
+          <h4>æ–°å¢žå¤§åˆ†ç±»</h4>
+          <input type="text" name="group_key" placeholder="ä¾‹å¦‚: drinks" required>
+          <input type="text" name="group_label" placeholder="ä¾‹å¦‚: é¥®æ–™" required>
+          <button type="submit" name="add_group" value="1" class="btn btn-edit">âž• æ·»åŠ å¤§åˆ†ç±»</button>
         </form>
 
         <form class="category-mini-form" method="post">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-          <h4>新增小分类</h4>
-          <label>选择大分类</label>
+          <h4>æ–°å¢žå°åˆ†ç±»</h4>
+          <label>é€‰æ‹©å¤§åˆ†ç±»</label>
           <select name="group_id" required>
-            <option value="">请选择大分类</option>
+            <option value="">è¯·é€‰æ‹©å¤§åˆ†ç±»</option>
             <?php foreach ($groupsForForm as $group): ?>
               <option value="<?= (int)$group['id'] ?>"><?= htmlspecialchars($group['label']) ?></option>
             <?php endforeach; ?>
           </select>
-          <input type="text" name="category_key" placeholder="例如: cola" required>
-          <input type="text" name="category_name" placeholder="例如: 可乐" required>
-          <button type="submit" name="add_category" value="1" class="btn btn-edit">➕ 添加小分类</button>
+          <input type="text" name="category_key" placeholder="ä¾‹å¦‚: cola" required>
+          <input type="text" name="category_name" placeholder="ä¾‹å¦‚: å¯ä¹" required>
+          <button type="submit" name="add_category" value="1" class="btn btn-edit">âž• æ·»åŠ å°åˆ†ç±»</button>
         </form>
       </div>
 
       <div class="delete-category-area">
-        <h4>删除分类</h4>
+        <h4>åˆ é™¤åˆ†ç±»</h4>
         <div class="delete-split-grid">
           <div class="delete-panel">
-            <h4>大分类</h4>
+            <h4>å¤§åˆ†ç±»</h4>
             <div class="delete-list">
               <?php foreach ($groupsForForm as $group): ?>
                 <div class="delete-row">
@@ -639,12 +585,12 @@ $openSort = $_GET['open_sort'] ?? '';
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                     <input type="hidden" name="group_id" value="<?= (int)$group['id'] ?>">
                     <input type="text" name="group_label" value="<?= htmlspecialchars($group['label']) ?>" required>
-                    <button type="submit" name="rename_group" value="1" class="btn btn-edit">修改名称</button>
+                    <button type="submit" name="rename_group" value="1" class="btn btn-edit">ä¿®æ”¹åç§°</button>
                   </form>
-                  <form method="post" data-confirm="确定删除这个大分类吗？删除后不能恢复。">
+                  <form method="post" data-confirm="ç¡®å®šåˆ é™¤è¿™ä¸ªå¤§åˆ†ç±»å—ï¼Ÿåˆ é™¤åŽä¸èƒ½æ¢å¤ã€‚">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                     <input type="hidden" name="group_id" value="<?= (int)$group['id'] ?>">
-                    <button type="submit" name="delete_group" value="1" class="btn btn-delete">删除大分类</button>
+                    <button type="submit" name="delete_group" value="1" class="btn btn-delete">åˆ é™¤å¤§åˆ†ç±»</button>
                   </form>
                 </div>
               <?php endforeach; ?>
@@ -652,7 +598,7 @@ $openSort = $_GET['open_sort'] ?? '';
           </div>
 
           <div class="delete-panel">
-            <h4>小分类</h4>
+            <h4>å°åˆ†ç±»</h4>
             <div class="delete-list">
               <?php foreach ($categoryListForDelete as $item): ?>
                 <div class="delete-row">
@@ -661,12 +607,12 @@ $openSort = $_GET['open_sort'] ?? '';
                     <input type="hidden" name="category_id" value="<?= (int)$item['id'] ?>">
                     <small><?= htmlspecialchars($item['group_label']) ?> / <?= htmlspecialchars($item['category_key']) ?></small>
                     <input type="text" name="category_name" value="<?= htmlspecialchars($item['category_name']) ?>" required>
-                    <button type="submit" name="rename_category" value="1" class="btn btn-edit">修改名称</button>
+                    <button type="submit" name="rename_category" value="1" class="btn btn-edit">ä¿®æ”¹åç§°</button>
                   </form>
-                  <form method="post" data-confirm="确定删除这个小分类吗？删除后不能恢复。">
+                  <form method="post" data-confirm="ç¡®å®šåˆ é™¤è¿™ä¸ªå°åˆ†ç±»å—ï¼Ÿåˆ é™¤åŽä¸èƒ½æ¢å¤ã€‚">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                     <input type="hidden" name="category_key" value="<?= htmlspecialchars($item['category_key']) ?>">
-                    <button type="submit" name="delete_category" value="1" class="btn btn-delete">删除小分类</button>
+                    <button type="submit" name="delete_category" value="1" class="btn btn-delete">åˆ é™¤å°åˆ†ç±»</button>
                   </form>
                 </div>
               <?php endforeach; ?>
@@ -677,19 +623,19 @@ $openSort = $_GET['open_sort'] ?? '';
     </div>
   </div>
 
-  <div id="sortModal" class="category-modal" role="dialog" aria-modal="true" aria-label="分类排序">
+  <div id="sortModal" class="category-modal" role="dialog" aria-modal="true" aria-label="åˆ†ç±»æŽ’åº">
     <div class="category-modal-content">
       <div class="category-modal-header">
         <div>
-          <h3>分类排序</h3>
-          <p>调整后会立即改变前端商城左侧分类的显示顺序。</p>
+          <h3>åˆ†ç±»æŽ’åº</h3>
+          <p>è°ƒæ•´åŽä¼šç«‹å³æ”¹å˜å‰ç«¯å•†åŸŽå·¦ä¾§åˆ†ç±»çš„æ˜¾ç¤ºé¡ºåºã€‚</p>
         </div>
-        <button type="button" class="modal-close btn" onclick="closeSortModal()" aria-label="关闭">×</button>
+        <button type="button" class="modal-close btn" onclick="closeSortModal()" aria-label="å…³é—­">Ã—</button>
       </div>
 
       <div class="sort-section">
         <section class="sort-panel">
-          <h4>大分类排序</h4>
+          <h4>å¤§åˆ†ç±»æŽ’åº</h4>
           <div class="sort-list">
             <?php foreach ($groupsForForm as $index => $group): ?>
               <div class="sort-row">
@@ -703,13 +649,13 @@ $openSort = $_GET['open_sort'] ?? '';
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                     <input type="hidden" name="group_id" value="<?= (int)$group['id'] ?>">
                     <input type="hidden" name="direction" value="up">
-                    <button type="submit" name="move_group" value="1" class="btn btn-move" <?= $index === 0 ? 'disabled' : '' ?>>↑</button>
+                    <button type="submit" name="move_group" value="1" class="btn btn-move" <?= $index === 0 ? 'disabled' : '' ?>>â†‘</button>
                   </form>
                   <form method="post">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                     <input type="hidden" name="group_id" value="<?= (int)$group['id'] ?>">
                     <input type="hidden" name="direction" value="down">
-                    <button type="submit" name="move_group" value="1" class="btn btn-move" <?= $index === count($groupsForForm) - 1 ? 'disabled' : '' ?>>↓</button>
+                    <button type="submit" name="move_group" value="1" class="btn btn-move" <?= $index === count($groupsForForm) - 1 ? 'disabled' : '' ?>>â†“</button>
                   </form>
                 </div>
               </div>
@@ -718,7 +664,7 @@ $openSort = $_GET['open_sort'] ?? '';
         </section>
 
         <section class="sort-panel">
-          <h4>小分类排序</h4>
+          <h4>å°åˆ†ç±»æŽ’åº</h4>
           <?php foreach ($groupsForForm as $group): ?>
             <?php
               $groupCategories = array_values(array_filter(
@@ -741,13 +687,13 @@ $openSort = $_GET['open_sort'] ?? '';
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                         <input type="hidden" name="category_id" value="<?= (int)$item['id'] ?>">
                         <input type="hidden" name="direction" value="up">
-                        <button type="submit" name="move_category" value="1" class="btn btn-move" <?= $index === 0 ? 'disabled' : '' ?>>↑</button>
+                        <button type="submit" name="move_category" value="1" class="btn btn-move" <?= $index === 0 ? 'disabled' : '' ?>>â†‘</button>
                       </form>
                       <form method="post">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                         <input type="hidden" name="category_id" value="<?= (int)$item['id'] ?>">
                         <input type="hidden" name="direction" value="down">
-                        <button type="submit" name="move_category" value="1" class="btn btn-move" <?= $index === count($groupCategories) - 1 ? 'disabled' : '' ?>>↓</button>
+                        <button type="submit" name="move_category" value="1" class="btn btn-move" <?= $index === count($groupCategories) - 1 ? 'disabled' : '' ?>>â†“</button>
                       </form>
                     </div>
                   </div>
@@ -764,7 +710,7 @@ $openSort = $_GET['open_sort'] ?? '';
 
   <div class="table-wrapper">
     <table>
-      <tr><th>ID</th><th>SKU</th><th>图片</th><th>商品名</th><th>价格</th><th>库存</th><th>排序</th><th>操作</th></tr>
+      <tr><th>ID</th><th>SKU</th><th>å›¾ç‰‡</th><th>å•†å“å</th><th>ä»·æ ¼</th><th>åº“å­˜</th><th>æŽ’åº</th><th>æ“ä½œ</th></tr>
       <?php foreach($products as $p): ?>
       <tr>
         <td><?= $p['id'] ?></td>
@@ -772,23 +718,23 @@ $openSort = $_GET['open_sort'] ?? '';
         <td><?php if($p['image_url']): ?><img src="<?= htmlspecialchars(productImageUrl($p['image_url']), ENT_QUOTES) ?>" onerror="this.remove();" class="thumb"><?php endif; ?></td>
         <td>
           <?= htmlspecialchars($p['name']) ?>
-          <br><small><strong><?= ($p['product_type'] ?? 'single') === 'grouped' ? '分类商品' : '单商品' ?></strong></small>
+          <br><small><strong><?= ($p['product_type'] ?? 'single') === 'grouped' ? 'åˆ†ç±»å•†å“' : 'å•å•†å“' ?></strong></small>
         </td>
         <td>RM <?= number_format($p['price'],2) ?></td>
         <td><?= $p['stock'] ?></td>
         <td><?= $p['sort_order'] ?></td>
         <td>
 
-          <!-- ✅ Edit 按钮 -->
+          <!-- âœ… Edit æŒ‰é’® -->
           <a href="edit_product.php?id=<?= $p['id'] ?>" 
              class="btn btn-edit">
-             ✏️ 编辑
+             âœï¸ ç¼–è¾‘
           </a>
           <?php if (($p['product_type'] ?? 'single') === 'grouped'): ?>
-            <button type="button" class="btn btn-move" onclick="const row=document.getElementById('child-<?= (int)$p['id'] ?>');row.hidden=!row.hidden;">展开分类</button>
+            <button type="button" class="btn btn-move" onclick="const row=document.getElementById('child-<?= (int)$p['id'] ?>');row.hidden=!row.hidden;">å±•å¼€åˆ†ç±»</button>
           <?php endif; ?>
 
-          <!-- ✅ 热销 -->
+          <!-- âœ… çƒ­é”€ -->
           <form method="post" style="display:inline;">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
@@ -798,15 +744,15 @@ $openSort = $_GET['open_sort'] ?? '';
               <input type="checkbox" name="is_hot" value="1"
                 <?= $p['is_hot'] ? 'checked' : '' ?>
                 onchange="this.form.submit()">
-              🔥
+              ðŸ”¥
             </label>
           </form>
 
-          <!-- ✅ 删除 -->
-          <form method="post" style="display:inline;" data-confirm="确定删除这个商品吗？删除后不能恢复。">
+          <!-- âœ… åˆ é™¤ -->
+          <form method="post" style="display:inline;" data-confirm="ç¡®å®šåˆ é™¤è¿™ä¸ªå•†å“å—ï¼Ÿåˆ é™¤åŽä¸èƒ½æ¢å¤ã€‚">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
             <button type="submit" name="delete_product" value="<?= (int)$p['id'] ?>" class="btn btn-delete">
-              🗑 删除
+              ðŸ—‘ åˆ é™¤
             </button>
           </form>
 
@@ -821,11 +767,11 @@ $openSort = $_GET['open_sort'] ?? '';
               <strong><?= htmlspecialchars($child['name']) ?></strong>
               <span><?= htmlspecialchars($child['sku']) ?></span>
               <span>RM <?= number_format((float)$child['price'],2) ?></span>
-              <span>库存 <?= (int)$child['stock'] ?></span>
-              <a class="btn btn-edit" href="edit_product.php?id=<?= (int)$p['id'] ?>#variant-<?= (int)$child['id'] ?>">在分类商品中编辑</a>
+              <span>åº“å­˜ <?= (int)$child['stock'] ?></span>
+              <a class="btn btn-edit" href="edit_product.php?id=<?= (int)$p['id'] ?>#variant-<?= (int)$child['id'] ?>">åœ¨åˆ†ç±»å•†å“ä¸­ç¼–è¾‘</a>
             </div>
           <?php endforeach; ?>
-          <?php if(empty($childrenByParent[(int)$p['id']])): ?><p>还没有归入单商品。</p><?php endif; ?>
+          <?php if(empty($childrenByParent[(int)$p['id']])): ?><p>è¿˜æ²¡æœ‰å½’å…¥å•å•†å“ã€‚</p><?php endif; ?>
         </td>
       </tr>
       <?php endif; ?>
@@ -836,11 +782,11 @@ $openSort = $_GET['open_sort'] ?? '';
 
 <div id="siteAlertDialog" class="site-dialog" role="dialog" aria-modal="true" aria-labelledby="siteAlertTitle">
   <div class="site-dialog-card">
-    <div class="site-dialog-icon">✓</div>
-    <h3 id="siteAlertTitle">操作完成</h3>
+    <div class="site-dialog-icon">âœ“</div>
+    <h3 id="siteAlertTitle">æ“ä½œå®Œæˆ</h3>
     <p id="siteAlertMessage"></p>
     <div class="site-dialog-actions">
-      <button type="button" class="btn btn-edit" id="siteAlertOk">确定</button>
+      <button type="button" class="btn btn-edit" id="siteAlertOk">ç¡®å®š</button>
     </div>
   </div>
 </div>
@@ -848,127 +794,18 @@ $openSort = $_GET['open_sort'] ?? '';
 <div id="siteConfirmDialog" class="site-dialog" role="dialog" aria-modal="true" aria-labelledby="siteConfirmTitle">
   <div class="site-dialog-card">
     <div class="site-dialog-icon">!</div>
-    <h3 id="siteConfirmTitle">请确认操作</h3>
+    <h3 id="siteConfirmTitle">è¯·ç¡®è®¤æ“ä½œ</h3>
     <p id="siteConfirmMessage"></p>
     <div class="site-dialog-actions">
-      <button type="button" class="btn btn-move" id="siteConfirmCancel">取消</button>
-      <button type="button" class="btn btn-delete" id="siteConfirmOk">确定删除</button>
+      <button type="button" class="btn btn-move" id="siteConfirmCancel">å–æ¶ˆ</button>
+      <button type="button" class="btn btn-delete" id="siteConfirmOk">ç¡®å®šåˆ é™¤</button>
     </div>
   </div>
 </div>
 
 <script>
-  const alertMsg = <?= json_encode($alert, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
-  const alertDialog = document.getElementById('siteAlertDialog');
-  const confirmDialog = document.getElementById('siteConfirmDialog');
-  let pendingConfirmForm = null;
-
-  function openSiteDialog(dialog) {
-    dialog.classList.add('show');
-    document.body.classList.add('dialog-open');
-  }
-
-  function closeSiteDialog(dialog) {
-    dialog.classList.remove('show');
-    if (!document.querySelector('.site-dialog.show')) {
-      document.body.classList.remove('dialog-open');
-    }
-  }
-
-  if (alertMsg) {
-    document.getElementById('siteAlertMessage').textContent = alertMsg;
-    openSiteDialog(alertDialog);
-  }
-
-  document.getElementById('siteAlertOk').addEventListener('click', function () {
-    closeSiteDialog(alertDialog);
-  });
-
-  document.querySelectorAll('form[data-confirm]').forEach(function (form) {
-    form.addEventListener('submit', function (event) {
-      if (form.dataset.confirmed === '1') {
-        return;
-      }
-      event.preventDefault();
-      pendingConfirmForm = form;
-      document.getElementById('siteConfirmMessage').textContent = form.dataset.confirm;
-      openSiteDialog(confirmDialog);
-    });
-  });
-
-  document.getElementById('siteConfirmCancel').addEventListener('click', function () {
-    pendingConfirmForm = null;
-    closeSiteDialog(confirmDialog);
-  });
-
-  document.getElementById('siteConfirmOk').addEventListener('click', function () {
-    if (!pendingConfirmForm) return;
-    pendingConfirmForm.dataset.confirmed = '1';
-    pendingConfirmForm.requestSubmit();
-  });
-
-  [alertDialog, confirmDialog].forEach(function (dialog) {
-    dialog.addEventListener('click', function (event) {
-      if (event.target === dialog) {
-        pendingConfirmForm = null;
-        closeSiteDialog(dialog);
-      }
-    });
-  });
-
-  window.addEventListener('DOMContentLoaded', function () {
-    if (<?= $openCategory === '1' ? 'true' : 'false' ?>) {
-      openCategoryModal();
-    }
-    if (<?= $openSort === '1' ? 'true' : 'false' ?>) {
-      openSortModal();
-    }
-  });
-
-  function openCategoryModal(){
-    document.getElementById('categoryModal').classList.add('show');
-  }
-
-  function closeCategoryModal(){
-    document.getElementById('categoryModal').classList.remove('show');
-  }
-
-  function openSortModal(){
-    document.getElementById('sortModal').classList.add('show');
-  }
-
-  function closeSortModal(){
-    document.getElementById('sortModal').classList.remove('show');
-  }
-
-  (function () {
-    const groupSelect = document.getElementById('groupSelect');
-    const catSelect = document.getElementById('catSelect');
-
-    function syncCategoryOptions() {
-      const group = groupSelect.value;
-      const options = Array.from(catSelect.querySelectorAll('option'));
-      const hasGroup = !!group;
-
-      options.forEach(function (option) {
-        const match = !hasGroup || option.getAttribute('data-group') === group || option.value === '';
-        option.hidden = !match;
-        option.disabled = !match;
-      });
-
-      if (group) {
-        catSelect.value = '';
-      }
-    }
-
-    if (groupSelect && catSelect) {
-      groupSelect.addEventListener('change', function () {
-        syncCategoryOptions();
-      });
-      syncCategoryOptions();
-    }
-  })();
-
+<?php include __DIR__ . '/assets/js/products.js.php'; ?>
 </script>
 </body>
 </html>
+

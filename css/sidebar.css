@@ -1,3 +1,7 @@
+/*
+ * 辅助侧边栏样式：用于需要侧栏导航或侧栏布局的页面。
+ */
+
 body {
   margin: 0;
   font-family: "Segoe UI", Arial, sans-serif;

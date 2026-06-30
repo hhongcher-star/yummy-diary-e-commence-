@@ -1,4 +1,5 @@
 <?php
+// 付款确认 API：确认订单付款状态，并更新订单相关会话或数据库状态。
 session_start();
 
 require __DIR__ . '/../../config.php';

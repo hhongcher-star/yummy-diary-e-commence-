@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1050" viewBox="0 0 1800 1050">
+  <defs>
+    <style>
+      .bg{fill:#fbfaf7}
+      .title{font:800 34px Arial,Helvetica,sans-serif;letter-spacing:2px;fill:#111}
+      .subtitle{font:800 18px Arial,Helvetica,sans-serif;letter-spacing:3px;fill:#111}
+      .caption{font:400 14px Arial,Helvetica,sans-serif;fill:#555}
+      .legend{font:700 12px Arial,Helvetica,sans-serif;letter-spacing:1.3px;fill:#444}
+      .page{fill:#111}
+      .pageText{font:800 13px Arial,Helvetica,sans-serif;fill:white}
+      .root{fill:#25a8df}
+      .rootText{font:800 14px Arial,Helvetica,sans-serif;fill:white}
+      .node{fill:white;stroke:#111;stroke-width:1.2}
+      .nodeText{font:700 12px Arial,Helvetica,sans-serif;fill:#111}
+      .component{fill:#d7ad32}
+      .componentText{font:800 13px Arial,Helvetica,sans-serif;fill:#111}
+      .api{fill:#eef6fb;stroke:#1987b8;stroke-width:1.2}
+      .apiText{font:700 12px Arial,Helvetica,sans-serif;fill:#11455d}
+      .line{stroke:#d2a729;stroke-width:4;fill:none;stroke-linecap:square}
+      .thin{stroke:#d2a729;stroke-width:3;fill:none;stroke-linecap:square}
+    </style>
+  </defs>
+  <rect class="bg" width="1800" height="1050"/>
+
+  <text x="900" y="55" text-anchor="middle" class="title">◆ YUMMY DIARY</text>
+  <text x="900" y="110" text-anchor="middle" class="subtitle">FRONTEND WEBSITE SITEMAP</text>
+
+  <rect x="640" y="132" width="14" height="14" class="page"/>
+  <text x="665" y="144" class="legend">PAGE</text>
+  <rect x="720" y="132" width="14" height="14" class="node"/>
+  <text x="745" y="144" class="legend">SECTION / FUNCTION</text>
+  <rect x="895" y="132" width="14" height="14" class="component"/>
+  <text x="920" y="144" class="legend">SHARED COMPONENT</text>
+  <rect x="1100" y="132" width="14" height="14" class="api"/>
+  <text x="1125" y="144" class="legend">API / ACTION</text>
+
+  <rect x="805" y="185" width="190" height="44" class="root"/>
+  <text x="900" y="212" text-anchor="middle" class="rootText">Frontend Entry</text>
+  <path d="M900 229 V292 M118 292 H1682" class="line"/>
+
+  <g transform="translate(55 322)">
+    <rect width="140" height="44" class="page"/>
+    <text x="70" y="28" text-anchor="middle" class="pageText">Home Page</text>
+    <path d="M70 44 V76 M30 76 H110" class="line"/>
+    <rect x="-8" y="98" width="156" height="36" class="node"/>
+    <text x="70" y="121" text-anchor="middle" class="nodeText">Hero / Intro</text>
+    <path d="M70 134 V150" class="thin"/>
+    <rect x="-8" y="150" width="156" height="36" class="node"/>
+    <text x="70" y="173" text-anchor="middle" class="nodeText">Featured Categories</text>
+    <path d="M70 186 V202" class="thin"/>
+    <rect x="-8" y="202" width="156" height="36" class="node"/>
+    <text x="70" y="225" text-anchor="middle" class="nodeText">Featured Products</text>
+    <path d="M70 238 V254" class="thin"/>
+    <rect x="-8" y="254" width="156" height="36" class="node"/>
+    <text x="70" y="277" text-anchor="middle" class="nodeText">Go to Shop CTA</text>
+  </g>
+
+  <g transform="translate(275 322)">
+    <rect width="140" height="44" class="page"/>
+    <text x="70" y="28" text-anchor="middle" class="pageText">Shop Page</text>
+    <path d="M70 44 V76 M20 76 H120" class="line"/>
+    <rect x="-25" y="98" width="120" height="36" class="node"/>
+    <text x="35" y="121" text-anchor="middle" class="nodeText">Product Grid</text>
+    <rect x="110" y="98" width="120" height="36" class="node"/>
+    <text x="170" y="121" text-anchor="middle" class="nodeText">Category Filter</text>
+    <path d="M35 134 V150" class="thin"/>
+    <path d="M170 134 V150" class="thin"/>
+    <rect x="-25" y="150" width="120" height="36" class="node"/>
+    <text x="35" y="173" text-anchor="middle" class="nodeText">Product Card</text>
+    <rect x="110" y="150" width="120" height="36" class="node"/>
+    <text x="170" y="173" text-anchor="middle" class="nodeText">Search Results</text>
+    <path d="M102 186 V206" class="thin"/>
+    <rect x="42" y="206" width="120" height="36" class="api"/>
+    <text x="102" y="229" text-anchor="middle" class="apiText">search.php</text>
+  </g>
+
+  <g transform="translate(510 322)">
+    <rect width="160" height="44" class="page"/>
+    <text x="80" y="28" text-anchor="middle" class="pageText">Cart Experience</text>
+    <path d="M80 44 V76 M25 76 H135" class="line"/>
+    <rect x="-25" y="98" width="130" height="36" class="node"/>
+    <text x="40" y="121" text-anchor="middle" class="nodeText">Floating Cart</text>
+    <rect x="120" y="98" width="130" height="36" class="node"/>
+    <text x="185" y="121" text-anchor="middle" class="nodeText">Cart Modal</text>
+    <path d="M40 134 V150" class="thin"/>
+    <path d="M185 134 V150" class="thin"/>
+    <rect x="-25" y="150" width="130" height="36" class="node"/>
+    <text x="40" y="173" text-anchor="middle" class="nodeText">Add / Remove</text>
+    <rect x="120" y="150" width="130" height="36" class="node"/>
+    <text x="185" y="173" text-anchor="middle" class="nodeText">Quantity Update</text>
+    <path d="M112 186 V206" class="thin"/>
+    <rect x="32" y="206" width="160" height="36" class="api"/>
+    <text x="112" y="229" text-anchor="middle" class="apiText">add_to_cart.php</text>
+  </g>
+
+  <g transform="translate(780 322)">
+    <rect width="160" height="44" class="page"/>
+    <text x="80" y="28" text-anchor="middle" class="pageText">Checkout Flow</text>
+    <path d="M80 44 V76 M20 76 H140" class="line"/>
+    <rect x="-15" y="98" width="130" height="36" class="node"/>
+    <text x="50" y="121" text-anchor="middle" class="nodeText">Order Summary</text>
+    <rect x="130" y="98" width="130" height="36" class="node"/>
+    <text x="195" y="121" text-anchor="middle" class="nodeText">Shipping Option</text>
+    <path d="M50 134 V150" class="thin"/>
+    <path d="M195 134 V150" class="thin"/>
+    <rect x="-15" y="150" width="130" height="36" class="node"/>
+    <text x="50" y="173" text-anchor="middle" class="nodeText">Place Order</text>
+    <rect x="130" y="150" width="130" height="36" class="node"/>
+    <text x="195" y="173" text-anchor="middle" class="nodeText">Payment Confirm</text>
+    <path d="M122 186 V206" class="thin"/>
+    <rect x="32" y="206" width="180" height="36" class="api"/>
+    <text x="122" y="229" text-anchor="middle" class="apiText">checkout.php</text>
+    <path d="M122 242 V258" class="thin"/>
+    <rect x="12" y="258" width="220" height="36" class="api"/>
+    <text x="122" y="281" text-anchor="middle" class="apiText">confirm_payment.php</text>
+  </g>
+
+  <g transform="translate(1080 322)">
+    <rect width="150" height="44" class="page"/>
+    <text x="75" y="28" text-anchor="middle" class="pageText">Receipt Page</text>
+    <path d="M75 44 V76 M35 76 H115" class="line"/>
+    <rect x="-5" y="98" width="160" height="36" class="node"/>
+    <text x="75" y="121" text-anchor="middle" class="nodeText">Order Number</text>
+    <path d="M75 134 V150" class="thin"/>
+    <rect x="-5" y="150" width="160" height="36" class="node"/>
+    <text x="75" y="173" text-anchor="middle" class="nodeText">Order Details</text>
+    <path d="M75 186 V202" class="thin"/>
+    <rect x="-5" y="202" width="160" height="36" class="node"/>
+    <text x="75" y="225" text-anchor="middle" class="nodeText">Payment Status</text>
+    <path d="M75 238 V254" class="thin"/>
+    <rect x="-5" y="254" width="160" height="36" class="node"/>
+    <text x="75" y="277" text-anchor="middle" class="nodeText">Back to Shop</text>
+  </g>
+
+  <g transform="translate(1305 322)">
+    <rect width="150" height="44" class="page"/>
+    <text x="75" y="28" text-anchor="middle" class="pageText">Contact Page</text>
+    <path d="M75 44 V76 M35 76 H115" class="line"/>
+    <rect x="-5" y="98" width="160" height="36" class="node"/>
+    <text x="75" y="121" text-anchor="middle" class="nodeText">Contact Details</text>
+    <path d="M75 134 V150" class="thin"/>
+    <rect x="-5" y="150" width="160" height="36" class="node"/>
+    <text x="75" y="173" text-anchor="middle" class="nodeText">Social / Store Info</text>
+    <path d="M75 186 V202" class="thin"/>
+    <rect x="-5" y="202" width="160" height="36" class="node"/>
+    <text x="75" y="225" text-anchor="middle" class="nodeText">Customer Enquiry</text>
+  </g>
+
+  <g transform="translate(1530 322)">
+    <rect width="150" height="44" class="page"/>
+    <text x="75" y="28" text-anchor="middle" class="pageText">Search Page</text>
+    <path d="M75 44 V76 M35 76 H115" class="line"/>
+    <rect x="-5" y="98" width="160" height="36" class="node"/>
+    <text x="75" y="121" text-anchor="middle" class="nodeText">Keyword Query</text>
+    <path d="M75 134 V150" class="thin"/>
+    <rect x="-5" y="150" width="160" height="36" class="node"/>
+    <text x="75" y="173" text-anchor="middle" class="nodeText">Suggestions</text>
+    <path d="M75 186 V206" class="thin"/>
+    <rect x="-15" y="206" width="180" height="36" class="api"/>
+    <text x="75" y="229" text-anchor="middle" class="apiText">search_suggest.php</text>
+  </g>
+
+  <rect x="560" y="700" width="200" height="46" class="component"/>
+  <text x="660" y="728" text-anchor="middle" class="componentText">Shared Header</text>
+  <path d="M660 746 V782" class="line"/>
+  <rect x="470" y="782" width="380" height="62" class="node"/>
+  <text x="660" y="806" text-anchor="middle" class="nodeText">Logo / Navigation / Search Box</text>
+  <text x="660" y="824" text-anchor="middle" class="nodeText">Home · Shop · Contact</text>
+
+  <rect x="1040" y="700" width="200" height="46" class="component"/>
+  <text x="1140" y="728" text-anchor="middle" class="componentText">Shared Footer</text>
+  <path d="M1140 746 V782" class="line"/>
+  <rect x="950" y="782" width="380" height="62" class="node"/>
+  <text x="1140" y="806" text-anchor="middle" class="nodeText">Footer Content / Floating Cart UI</text>
+  <text x="1140" y="824" text-anchor="middle" class="nodeText">Cart Badge · Modal · Checkout Trigger</text>
+
+  <text x="900" y="978" text-anchor="middle" class="caption">Customer journey from home browsing to shop, cart, checkout, receipt, contact, and search support.</text>
+</svg>

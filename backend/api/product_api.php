@@ -1,4 +1,5 @@
 <?php
+// 后台商品 API：需要管理员权限，用于商品资料、排序或库存相关的异步操作。
 require __DIR__ . '/../auth_admin.php';
 require __DIR__ . '/../../config.php';
 

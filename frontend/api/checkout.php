@@ -1,4 +1,5 @@
 <?php
+// 结账 API：根据购物车内容创建订单，并返回收据页面地址。
 session_start();
 
 require __DIR__ . '/../../config.php';

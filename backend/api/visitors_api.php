@@ -1,4 +1,5 @@
 <?php
+// 后台访客统计 API：需要管理员权限，为仪表盘提供访客数据。
 require __DIR__ . '/../auth_admin.php';
 require __DIR__ . '/../../config.php';
 

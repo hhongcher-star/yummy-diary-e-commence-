@@ -1,4 +1,5 @@
 <?php
+// 购物车 API：处理加入购物车、获取购物车、数量调整、删除和清空操作。
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

@@ -1,4 +1,5 @@
 <?php
+// 管理员退出：清理后台登录 session 并返回登录页。
 session_start();
 
 $_SESSION = [];

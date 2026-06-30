@@ -1,0 +1,58 @@
+
+  .table-wrapper{overflow-x:auto;}
+  .page-header{display:flex;justify-content:space-between;align-items:center;gap:16px;}
+  .page-header .page-title{flex:1;}
+  .page-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+  .category-modal{display:none;position:fixed;inset:0;background:rgba(40,30,20,.35);z-index:999;padding:30px;overflow:auto;}
+  .category-modal.show{display:block;}
+  .category-modal-content{max-width:980px;margin:40px auto;background:#fff;border-radius:28px;padding:24px;box-shadow:0 25px 70px rgba(80,50,30,.22);}
+  .category-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+  .category-modal-header h3{margin:0;}
+  .modal-close{width:42px;height:42px;border-radius:50%;font-size:24px;background:#fffaf4;color:var(--text);}
+  .category-manage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;}
+  .category-mini-form{background:#fffaf4;border:1px solid var(--line);border-radius:22px;padding:18px;display:grid;gap:12px;}
+  .delete-category-area{margin-top:20px;}
+  .delete-split-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;}
+  .delete-panel{background:#fffaf4;border:1px solid var(--line);border-radius:22px;padding:18px;}
+  .delete-panel h4{margin:0 0 14px;color:var(--text);}
+  .delete-list{display:grid;gap:10px;max-height:430px;overflow:auto;padding-right:4px;}
+  .delete-row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;}
+  .delete-row span{font-weight:700;color:var(--text);}
+  .delete-row small{color:var(--muted);font-weight:600;}
+  .category-rename-form{display:grid;grid-template-columns:minmax(110px,1fr) auto;align-items:center;gap:8px;flex:1;}
+  .category-rename-form small{grid-column:1/-1;}
+  .category-rename-form input[type="text"]{min-width:0;width:100%;}
+  @media(max-width:700px){
+    .delete-row{align-items:stretch;flex-direction:column;}
+    .category-rename-form{grid-template-columns:1fr;}
+    .category-rename-form small{grid-column:auto;}
+  }
+  .sort-section{display:grid;gap:18px;}
+  .sort-panel{background:#fffaf4;border:1px solid var(--line);border-radius:22px;padding:18px;}
+  .sort-panel h4{margin:0 0 14px;color:var(--text);}
+  .sort-list{display:grid;gap:10px;}
+  .sort-row{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:11px 14px;}
+  .sort-position{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--soft);font-weight:800;}
+  .sort-name{display:grid;gap:2px;font-weight:800;color:var(--text);}
+  .sort-name small{color:var(--muted);font-weight:600;}
+  .sort-controls{display:flex;gap:7px;}
+  .sort-controls form{display:inline;}
+  .sort-controls button{min-width:44px;padding:9px 12px;}
+  .sort-group{display:grid;gap:10px;}
+  .sort-children{display:grid;gap:8px;padding-left:22px;border-left:3px solid var(--soft);}
+  .site-dialog{display:none;position:fixed;inset:0;z-index:1200;background:rgba(40,30,20,.42);padding:20px;align-items:center;justify-content:center;}
+  .site-dialog.show{display:flex;}
+  .site-dialog-card{width:min(430px,100%);background:#fff;border:1px solid var(--line);border-radius:26px;padding:26px;box-shadow:0 24px 70px rgba(80,50,30,.25);}
+  .site-dialog-icon{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;margin-bottom:16px;background:var(--soft);color:#7a5a2d;font-size:24px;font-weight:800;}
+  .site-dialog-card h3{margin:0 0 10px;color:var(--text);}
+  .site-dialog-card p{margin:0;color:var(--muted);line-height:1.65;white-space:pre-line;}
+  .site-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;}
+  body.dialog-open{overflow:hidden;}
+  @media(max-width:900px){.delete-split-grid{grid-template-columns:1fr;}}
+  @media(max-width:768px){
+    .page-header{flex-wrap:wrap;}
+    .page-actions{display:grid;grid-template-columns:1fr 1fr;}
+    .sort-row{grid-template-columns:42px minmax(0,1fr);}
+    .sort-controls{grid-column:1 / -1;justify-content:flex-end;}
+  }
+

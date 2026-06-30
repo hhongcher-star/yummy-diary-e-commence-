@@ -1,0 +1,12 @@
+
+  body{background:#f5f5f5;}
+  main{background:#f5f5f5;}
+  .page-title p{color:#666;}
+  .sort-mobile-only{display:none;}
+  .live-preview{width:100%;height:calc(100vh - 175px);min-height:650px;border:1px solid var(--line);border-radius:24px;background:#fff;box-shadow:var(--shadow);}
+  @media(max-width:768px){
+    .live-preview{display:none;}
+    .sort-mobile-only{display:flex;align-items:center;justify-content:center;min-height:150px;border:1px solid #f5bfd4;border-radius:18px;background:#fff;color:#6f6070;font-size:18px;font-weight:800;text-align:center;padding:24px;margin-top:30px;}
+    .sort-mobile-only .icon{display:block;font-size:28px;margin-bottom:14px;}
+  }
+

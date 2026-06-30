@@ -1,4 +1,5 @@
 <?php
+// æ”¶æ®é¡µé¢ï¼šç”¨æˆ·ç»“è´¦åŽæ˜¾ç¤ºè®¢å•ç¼–å·ã€è®¢å•æ˜Žç»†å’Œä»˜æ¬¾ç¡®è®¤çŠ¶æ€ã€‚
 session_start();
 require __DIR__ . '/../config.php';
 date_default_timezone_set("Asia/Kuala_Lumpur");
@@ -7,7 +8,7 @@ $order_number = $_GET['order_number'] ?? '';
 $access_token = $_GET['token'] ?? '';
 
 if (!$order_number || !$access_token) {
-    die("❌ 订单访问资料缺失");
+    die("âŒ è®¢å•è®¿é—®èµ„æ–™ç¼ºå¤±");
 }
 
 $isAdmin = !empty($_SESSION['admin_id']);
@@ -24,7 +25,7 @@ if ($isAdmin) {
 $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$order) {
-    die("❌ 找不到订单，请返回重新下单。");
+    die("âŒ æ‰¾ä¸åˆ°è®¢å•ï¼Œè¯·è¿”å›žé‡æ–°ä¸‹å•ã€‚");
 }
 
 $stmt_items = $pdo->prepare(
@@ -60,7 +61,7 @@ foreach ($items as $it) {
 
 $isPendingReceipt = (($order['order_status'] ?? 'pending') === 'draft');
 
-$timeFormatted = date("Y年n月j日 H:i", strtotime($order_data['time']));
+$timeFormatted = date("Yå¹´næœˆjæ—¥ H:i", strtotime($order_data['time']));
 
 $total = 0;
 foreach ($order_data['items'] as $item) {
@@ -72,27 +73,27 @@ $grand_total = (float)$order_data['grand_total'];
 
 $gifts = [];
 $isEastMalaysia = strtolower(trim((string)($order['region'] ?? ''))) === 'east';
-$region_label = $isEastMalaysia ? '东马' : '西马';
-$shipping_tier = '普通运费';
+$region_label = $isEastMalaysia ? 'ä¸œé©¬' : 'è¥¿é©¬';
+$shipping_tier = 'æ™®é€šè¿è´¹';
 
 if ($total >= 49.90) {
-    $shipping_tier = '满 RM49.90';
+    $shipping_tier = 'æ»¡ RM49.90';
 } elseif ($total >= 39.90) {
-    $shipping_tier = '满 RM39.90';
+    $shipping_tier = 'æ»¡ RM39.90';
 } elseif ($total >= 29.90) {
-    $shipping_tier = '满 RM29.90';
+    $shipping_tier = 'æ»¡ RM29.90';
 } elseif ($total >= 19.90) {
-    $shipping_tier = '满 RM19.90';
+    $shipping_tier = 'æ»¡ RM19.90';
 }
 
 $shipping_text = $shipping_cost > 0
-    ? '运费 RM' . number_format($shipping_cost, 2)
-    : '免运';
-$shipping_msg = "🚚 {$region_label}{$shipping_tier}：{$shipping_text}";
+    ? 'è¿è´¹ RM' . number_format($shipping_cost, 2)
+    : 'å…è¿';
+$shipping_msg = "ðŸšš {$region_label}{$shipping_tier}ï¼š{$shipping_text}";
 
 if ($total >= 29.90) {
-    $shipping_msg .= '<br>🎁 赠品：1包魔芋爽 + 小挂件';
-    $gifts = ["魔芋爽", "小挂件"];
+    $shipping_msg .= '<br>ðŸŽ èµ å“ï¼š1åŒ…é­”èŠ‹çˆ½ + å°æŒ‚ä»¶';
+    $gifts = ["é­”èŠ‹çˆ½", "å°æŒ‚ä»¶"];
 }
 ?>
 
@@ -100,319 +101,13 @@ if ($total >= 29.90) {
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>订单收据 - Yummy Diary</title>
+<title>è®¢å•æ”¶æ® - Yummy Diary</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-body{
-  font-family:"Segoe UI",Arial,sans-serif;
-  background:#fff;
-  color:#333;
-  margin:0;
-  padding:0;
-  text-align:center;
-  animation:fadeIn .8s ease;
-}
-
-@keyframes fadeIn{
-  from{opacity:0;transform:translateY(10px);}
-  to{opacity:1;transform:translateY(0);}
-}
-
-.header{
-  padding:20px;
-  position:relative;
-}
-
-.header img{
-  width:90px;
-  height:auto;
-}
-
-h2{
-  margin-top:10px;
-  font-size:20px;
-}
-
-.container{
-  max-width:500px;
-  margin:20px auto;
-  padding:20px;
-  border:1px solid #eee;
-  border-radius:12px;
-  background:#fafafa;
-  box-shadow:0 4px 12px rgba(0,0,0,.05);
-}
-
-p{
-  margin:6px 0;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin:15px 0;
-}
-
-th,td{
-  border:1px solid #ddd;
-  padding:8px;
-  font-size:14px;
-}
-
-th{
-  background:#f5f5f5;
-}
-
-.receipt-product{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  text-align:left;
-}
-
-.receipt-product img{
-  width:46px;
-  height:46px;
-  flex:0 0 46px;
-  object-fit:cover;
-  border:1px solid #eee;
-  border-radius:8px;
-  background:#fff;
-}
-
-.total{
-  text-align:right;
-  font-size:16px;
-  font-weight:bold;
-  margin-top:10px;
-}
-
-.shipping{
-  margin-top:15px;
-  padding:12px;
-  border:1px dashed #aaa;
-  border-radius:10px;
-  background:#fdfdfd;
-  font-size:14px;
-  text-align:left;
-  line-height:1.7;
-}
-
-.footer{
-  margin-top:20px;
-  font-size:14px;
-  color:#555;
-}
-
-.footer h3{
-  margin:8px 0 5px;
-  font-size:15px;
-}
-
-.contact-icon{
-  font-size:18px;
-  margin-right:6px;
-  vertical-align:middle;
-}
-
-.btn-row{
-  display:flex;
-  justify-content:center;
-  gap:12px;
-  margin-top:18px;
-  flex-wrap:wrap;
-}
-
-.btn-short{
-  flex:1;
-  max-width:120px;
-  padding:10px;
-  border:2px solid #333;
-  border-radius:12px;
-  background:transparent;
-  color:#333;
-  font-size:14px;
-  cursor:pointer;
-  transition:all .3s ease;
-  text-decoration:none;
-}
-
-.btn-short i{
-  margin-right:6px;
-}
-
-.btn-short:hover{
-  background:#333;
-  color:#fff;
-}
-
-.back-btn{
-  position:absolute;
-  top:15px;
-  left:15px;
-  padding:8px 14px;
-  border:2px solid #333;
-  border-radius:25px;
-  background:transparent;
-  color:#333;
-  font-size:14px;
-  text-decoration:none;
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  transition:all .3s ease;
-}
-
-.back-btn:hover{
-  background:#333;
-  color:#fff;
-}
-
-.payment-modal{
-  display:none;
-  position:fixed;
-  inset:0;
-  z-index:3000;
-  padding:20px;
-  box-sizing:border-box;
-  background:rgba(0,0,0,.55);
-  align-items:center;
-  justify-content:center;
-}
-
-.payment-modal.show{display:flex;}
-
-.payment-card{
-  position:relative;
-  width:min(430px,100%);
-  max-height:90vh;
-  overflow-y:auto;
-  padding:24px;
-  box-sizing:border-box;
-  border-radius:20px;
-  background:#fff;
-  box-shadow:0 18px 60px rgba(0,0,0,.25);
-}
-
-.payment-card h3{margin:0 40px 12px;font-size:18px;}
-.payment-card p{margin:0 0 14px;line-height:1.6;}
-.payment-card img{display:block;width:100%;height:auto;border-radius:12px;cursor:zoom-in;}
-
-.payment-close{
-  position:absolute;
-  top:12px;
-  right:12px;
-  width:38px;
-  height:38px;
-  border:0;
-  border-radius:50%;
-  background:#f3f3f3;
-  font-size:22px;
-  cursor:pointer;
-}
-
-.payment-instagram{
-  display:block;
-  margin-top:16px;
-  padding:12px 16px;
-  border-radius:12px;
-  background:#111;
-  color:#fff;
-  font-weight:700;
-  text-decoration:none;
-}
-
-.payment-home{
-  display:block;
-  margin-top:10px;
-  padding:11px 16px;
-  border:2px solid #111;
-  border-radius:12px;
-  color:#111;
-  font-weight:700;
-  text-decoration:none;
-}
-
-.image-preview{
-  display:none;
-  position:fixed;
-  inset:0;
-  z-index:4000;
-  padding:18px;
-  box-sizing:border-box;
-  background:rgba(0,0,0,.9);
-  align-items:center;
-  justify-content:center;
-}
-
-.image-preview.show{display:flex;}
-.image-preview img{max-width:96vw;max-height:92vh;object-fit:contain;cursor:zoom-out;}
-
-.preview-close{
-  position:fixed;
-  top:16px;
-  right:16px;
-  width:42px;
-  height:42px;
-  border:0;
-  border-radius:50%;
-  background:#fff;
-  color:#111;
-  font-size:24px;
-  cursor:pointer;
-}
-
-@media(max-width:768px){
-  .header img{
-    width:70px;
-  }
-
-  h2{
-    font-size:18px;
-  }
-
-  .container{
-    width:92%;
-    margin:15px auto;
-    padding:15px;
-    box-sizing:border-box;
-  }
-
-  th,td{
-    font-size:12px;
-    padding:6px;
-  }
-
-  .receipt-product{
-    gap:7px;
-  }
-
-  .receipt-product img{
-    width:38px;
-    height:38px;
-    flex-basis:38px;
-  }
-
-  .btn-row{
-    gap:8px;
-  }
-
-  .btn-short{
-    max-width:100px;
-    font-size:13px;
-    padding:8px;
-  }
-
-  .back-btn{
-    padding:6px 12px;
-    font-size:13px;
-    top:10px;
-    left:10px;
-  }
-}
+<?php include __DIR__ . '/assets/css/receipt.css'; ?>
 </style>
 </head>
 
@@ -420,24 +115,24 @@ th{
 
 <div class="header">
   <a href="<?= htmlspecialchars(appUrl('shop'), ENT_QUOTES) ?>" class="back-btn">
-    <i class="fas fa-arrow-left"></i> 返回菜单
+    <i class="fas fa-arrow-left"></i> è¿”å›žèœå•
   </a>
 
-  <img src="/yummy-diary/images/猫_购物袋.jpg" alt="Yummy Diary">
-  <h2>🧾 Yummy Diary · 订单收据</h2>
+  <img src="/yummy-diary/images/çŒ«_è´­ç‰©è¢‹.jpg" alt="Yummy Diary">
+  <h2>ðŸ§¾ Yummy Diary Â· è®¢å•æ”¶æ®</h2>
 </div>
 
 <div class="container" id="receipt">
-  <p><strong>订单号:</strong> <?= htmlspecialchars($order_data['id']) ?></p>
-  <p><strong>下单时间:</strong> <?= htmlspecialchars($timeFormatted) ?></p>
+  <p><strong>è®¢å•å·:</strong> <?= htmlspecialchars($order_data['id']) ?></p>
+  <p><strong>ä¸‹å•æ—¶é—´:</strong> <?= htmlspecialchars($timeFormatted) ?></p>
 
   <table>
     <tr>
-      <th>数量</th>
-      <th>照片</th>
-      <th>商品</th>
-      <th>单价 (RM)</th>
-      <th>小计 (RM)</th>
+      <th>æ•°é‡</th>
+      <th>ç…§ç‰‡</th>
+      <th>å•†å“</th>
+      <th>å•ä»· (RM)</th>
+      <th>å°è®¡ (RM)</th>
     </tr>
 
     <?php foreach ($order_data['items'] as $item): ?>
@@ -463,31 +158,31 @@ th{
       <tr>
         <td>1</td>
         <td></td>
-        <td>[赠] <?= htmlspecialchars($gift) ?></td>
+        <td>[èµ ] <?= htmlspecialchars($gift) ?></td>
         <td>0.00</td>
         <td>0.00</td>
       </tr>
     <?php endforeach; ?>
 
     <tr>
-      <td colspan="4" style="text-align:right;">运费</td>
+      <td colspan="4" style="text-align:right;">è¿è´¹</td>
       <td><?= number_format($shipping_cost, 2) ?></td>
     </tr>
   </table>
 
-  <p class="total">商品总额: RM <?= number_format($total, 2) ?></p>
-  <p class="total">运费: RM <?= number_format($shipping_cost, 2) ?></p>
-  <p class="total">总价: RM <?= number_format($grand_total, 2) ?></p>
+  <p class="total">å•†å“æ€»é¢: RM <?= number_format($total, 2) ?></p>
+  <p class="total">è¿è´¹: RM <?= number_format($shipping_cost, 2) ?></p>
+  <p class="total">æ€»ä»·: RM <?= number_format($grand_total, 2) ?></p>
 
   <div class="shipping">
     <?= $shipping_msg ?>
   </div>
 
   <div class="footer">
-    <h3>💳 付款提示</h3>
-    <p>请联系商家获取付款方式。</p>
+    <h3>ðŸ’³ ä»˜æ¬¾æç¤º</h3>
+    <p>è¯·è”ç³»å•†å®¶èŽ·å–ä»˜æ¬¾æ–¹å¼ã€‚</p>
 
-    <h3>📩 联系方式</h3>
+    <h3>ðŸ“© è”ç³»æ–¹å¼</h3>
     <p>
       <a href="https://www.instagram.com/yummydiaryy_" target="_blank" style="color:#333;text-decoration:none;">
         <i class="fab fa-instagram contact-icon"></i>@yummydiaryy_
@@ -501,7 +196,7 @@ th{
 
   <div class="btn-row">
     <button type="button" id="openPayment" class="btn-short">
-      <i class="fas fa-credit-card"></i> <strong>付款</strong>
+      <i class="fas fa-credit-card"></i> <strong>ä»˜æ¬¾</strong>
     </button>
 
   </div>
@@ -509,96 +204,36 @@ th{
 
 <div id="paymentModal" class="payment-modal" role="dialog" aria-modal="true" aria-labelledby="paymentTitle">
   <div class="payment-card">
-    <button type="button" id="closePayment" class="payment-close" aria-label="关闭">&times;</button>
-    <h3 id="paymentTitle">付款</h3>
+    <button type="button" id="closePayment" class="payment-close" aria-label="å…³é—­">&times;</button>
+    <h3 id="paymentTitle">ä»˜æ¬¾</h3>
     <p>
-      请把付款记录发给
+      è¯·æŠŠä»˜æ¬¾è®°å½•å‘ç»™
       <a href="https://www.instagram.com/yummydiaryy_?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw=="
          target="_blank"
          rel="noopener noreferrer">@yummydiaryy_</a>
     </p>
-    <img id="paymentImage" src="/yummy-diary/images/payment-qr.png" alt="Touch 'n Go 付款二维码">
+    <img id="paymentImage" src="/yummy-diary/images/payment-qr.png" alt="Touch 'n Go ä»˜æ¬¾äºŒç»´ç ">
     <a class="payment-instagram"
        href="https://www.instagram.com/yummydiaryy_?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw==="
        target="_blank"
        rel="noopener noreferrer">
-      打开 Instagram 发送付款记录
+      æ‰“å¼€ Instagram å‘é€ä»˜æ¬¾è®°å½•
     </a>
     <a class="payment-home" href="<?= htmlspecialchars(appUrl(), ENT_QUOTES) ?>">
-      <i class="fas fa-home"></i> 回到主页
+      <i class="fas fa-home"></i> å›žåˆ°ä¸»é¡µ
     </a>
   </div>
 </div>
 
-<div id="imagePreview" class="image-preview" role="dialog" aria-modal="true" aria-label="付款图片放大预览">
-  <button type="button" id="closePreview" class="preview-close" aria-label="关闭">&times;</button>
-  <img src="/yummy-diary/images/payment-qr.png" alt="放大的 Touch 'n Go 付款二维码">
+<div id="imagePreview" class="image-preview" role="dialog" aria-modal="true" aria-label="ä»˜æ¬¾å›¾ç‰‡æ”¾å¤§é¢„è§ˆ">
+  <button type="button" id="closePreview" class="preview-close" aria-label="å…³é—­">&times;</button>
+  <img src="/yummy-diary/images/payment-qr.png" alt="æ”¾å¤§çš„ Touch 'n Go ä»˜æ¬¾äºŒç»´ç ">
 </div>
 
 <script>
-const paymentModal = document.getElementById("paymentModal");
-const imagePreview = document.getElementById("imagePreview");
-const isPendingReceipt = <?= $isPendingReceipt ? 'true' : 'false' ?>;
-const orderNumber = <?= json_encode($order_number) ?>;
-const accessToken = <?= json_encode($access_token) ?>;
-let paymentConfirmed = !isPendingReceipt;
-
-document.getElementById("openPayment").addEventListener("click", async () => {
-  const button = document.getElementById("openPayment");
-  button.disabled = true;
-
-  try {
-    if (!paymentConfirmed) {
-      const formData = new FormData();
-      formData.append("order_number", orderNumber);
-      formData.append("token", accessToken);
-
-      const response = await fetch(<?= json_encode(appUrl('frontend/api/confirm_payment.php')) ?>, {
-        method: "POST",
-        body: formData
-      });
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.msg || data.message || "记录订单失败");
-      }
-
-      paymentConfirmed = true;
-    }
-
-    paymentModal.classList.add("show");
-    document.body.style.overflow = "hidden";
-  } catch (error) {
-    alert("❌ " + error.message);
-  } finally {
-    button.disabled = false;
-  }
-});
-
-function closePaymentModal(){
-  paymentModal.classList.remove("show");
-  document.body.style.overflow = "";
-}
-
-document.getElementById("closePayment").addEventListener("click", closePaymentModal);
-paymentModal.addEventListener("click", event => {
-  if(event.target === paymentModal) closePaymentModal();
-});
-
-document.getElementById("paymentImage").addEventListener("click", () => {
-  imagePreview.classList.add("show");
-});
-
-function closeImagePreview(){
-  imagePreview.classList.remove("show");
-}
-
-document.getElementById("closePreview").addEventListener("click", closeImagePreview);
-imagePreview.addEventListener("click", event => {
-  if(event.target === imagePreview || event.target.tagName === "IMG") closeImagePreview();
-});
-
+<?php include __DIR__ . '/assets/js/receipt.js.php'; ?>
 </script>
 
 </body>
 </html>
+

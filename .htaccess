@@ -1,3 +1,4 @@
+## Yummy Diary 根目录路由规则：提供干净网址，并兼容旧的 /frontend/*.php 路径。
 RewriteEngine On
 DirectoryIndex index.php
 

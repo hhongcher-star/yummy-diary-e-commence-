@@ -1,4 +1,5 @@
 <?php
+// è®¢å•ç®¡ç†é¡µï¼šæŸ¥çœ‹è®¢å•åˆ—è¡¨ã€è®¢å•è¯¦æƒ…ã€ä»˜æ¬¾çŠ¶æ€å’Œå±¥çº¦å¤„ç†ã€‚
 require __DIR__ . '/auth_admin.php';
 require __DIR__ . '/../config.php';
 
@@ -13,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// 批量归档
+// æ‰¹é‡å½’æ¡£
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_payment_id'])) {
     $orderId = (int)$_POST['toggle_payment_id'];
 
@@ -196,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_ids'])) {
 }
 
 // ====================
-// 分页 & 搜索 & 月份筛选
+// åˆ†é¡µ & æœç´¢ & æœˆä»½ç­›é€‰
 // ====================
 $limit = 50;
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
@@ -247,237 +248,17 @@ foreach ($orders as $order) {
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>订单管理</title>
+<title>è®¢å•ç®¡ç†</title>
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 
 <link rel="stylesheet" href="/yummy-diary/backend/css/admin_layout.css">
 
 <style>
-  .orders-summary{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
-    gap:14px;
-    margin-bottom:22px;
-  }
-
-  .summary-card{
-    background:#fffaf4;
-    border:1px solid var(--line);
-    border-radius:22px;
-    padding:18px;
-    box-shadow:0 10px 28px rgba(120,90,60,.08);
-  }
-
-  .summary-card span{
-    display:block;
-    color:var(--muted);
-    font-size:13px;
-    font-weight:700;
-    margin-bottom:6px;
-  }
-
-  .summary-card strong{
-    display:block;
-    font-size:26px;
-    color:var(--text);
-  }
-
-  .summary-card small{
-    display:block;
-    margin-top:4px;
-    color:var(--muted);
-    font-size:12px;
-  }
-
-  .search-form{
-    background:rgba(255,255,255,.9);
-    border:1px solid var(--line);
-    border-radius:24px;
-    padding:18px;
-    display:flex;
-    flex-wrap:wrap;
-    gap:12px;
-    align-items:center;
-    box-shadow:var(--shadow);
-    margin-bottom:22px;
-  }
-
-  .search-form input{
-    min-width:220px;
-  }
-
-  .orders-table td{
-    vertical-align:middle;
-  }
-
-  .order-number{
-    font-weight:800;
-    color:var(--text);
-    white-space:nowrap;
-  }
-
-  .order-time{
-    color:var(--muted);
-    white-space:nowrap;
-    font-size:13px;
-  }
-
-  .amount{
-    font-weight:900;
-    white-space:nowrap;
-  }
-
-  .amount-details{
-    margin-top:4px;
-    color:var(--muted);
-    font-size:12px;
-    line-height:1.45;
-    white-space:nowrap;
-  }
-
-  .amount-gift{
-    color:#b7652f;
-  }
-
-  .status-badge{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    padding:7px 12px;
-    border-radius:999px;
-    font-weight:800;
-    font-size:13px;
-    white-space:nowrap;
-    cursor:pointer;
-  }
-
-  .status-paid{
-    background:#eefaf0;
-    color:#2f8f46;
-    border:1px solid #cdebd3;
-  }
-
-  .status-pending{
-    background:#fff4f4;
-    color:#d64545;
-    border:1px solid #ffd5d5;
-  }
-
-  .select-check{
-    width:18px;
-    height:18px;
-    accent-color:#c9a984;
-  }
-
-  .receipt-btn{
-    min-width:92px;
-  }
-
-  .row-actions{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    gap:8px;
-    flex-wrap:wrap;
-    min-width:330px;
-  }
-
-  .row-actions .btn,
-  .row-actions .status-badge{
-    min-height:42px;
-    padding:9px 12px;
-  }
-
-  .pagination{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    margin-top:20px;
-  }
-
-  .pagination a{
-    min-width:38px;
-    height:38px;
-    padding:0 12px;
-    border-radius:14px;
-    border:1px solid var(--line);
-    background:#fff;
-    color:var(--text);
-    text-decoration:none;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    font-weight:800;
-  }
-
-  .pagination a.active{
-    background:#ead6bd;
-    color:#3b2a20;
-    border-color:#ead6bd;
-    box-shadow:0 10px 24px rgba(120,90,60,.16);
-  }
-
-  .empty-state{
-    padding:34px;
-    text-align:center;
-    color:var(--muted);
-    font-weight:700;
-  }
-
-  @media(max-width:768px){
-    .search-form input{
-      min-width:100%;
-    }
-
-    .row-actions{
-      min-width:0;
-      justify-content:flex-start;
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-    }
-
-    .row-actions .btn,
-    .row-actions .status-badge{
-      width:100%;
-    }
-  }
+<?php include __DIR__ . '/assets/css/orders.css'; ?>
 </style>
 
 <script>
-  function toggleSelectAll(source) {
-    let checkboxes = document.querySelectorAll("input[name='order_ids[]']");
-    checkboxes.forEach(cb => cb.checked = source.checked);
-  }
-
-  function confirmBatchAction(event) {
-    const submitter = event.submitter;
-
-    if (submitter && ["toggle_payment_id", "mark_paid_id", "mark_unpaid_id", "archive_order_id", "delete_order_id"].includes(submitter.name)) {
-      return true;
-    }
-
-    const selected = document.querySelectorAll("input[name='order_ids[]']:checked");
-
-    if (selected.length === 0) {
-      alert("请先选择订单");
-      event.preventDefault();
-      return false;
-    }
-
-    if (submitter && submitter.name === "delete_selected") {
-      return confirm("确定要批量删除选中的订单吗？此操作不可恢复！");
-    }
-
-    if (submitter && submitter.name === "mark_paid") {
-      return confirm("确定将选中的订单标记为已付款吗？");
-    }
-
-    if (submitter && submitter.name === "mark_unpaid") {
-      return confirm("确定将选中的订单标记为未付款吗？");
-    }
-
-    return true;
-  }
+<?php include __DIR__ . '/assets/js/orders.js.php'; ?>
 </script>
 </head>
 
@@ -488,32 +269,32 @@ foreach ($orders as $order) {
 <main>
   <section class="page-header">
     <div class="page-title">
-      <h2>订单管理</h2>
-      <p>查看订单记录、付款状态、收据和批量处理订单</p>
+      <h2>è®¢å•ç®¡ç†</h2>
+      <p>æŸ¥çœ‹è®¢å•è®°å½•ã€ä»˜æ¬¾çŠ¶æ€ã€æ”¶æ®å’Œæ‰¹é‡å¤„ç†è®¢å•</p>
     </div>
   </section>
 
   <section class="orders-summary">
     <div class="summary-card">
-      <span>订单数量</span>
+      <span>è®¢å•æ•°é‡</span>
       <strong><?= $total_orders ?></strong>
-      <small>符合当前筛选条件</small>
+      <small>ç¬¦åˆå½“å‰ç­›é€‰æ¡ä»¶</small>
     </div>
 
     <div class="summary-card">
-      <span>本页销售额</span>
+      <span>æœ¬é¡µé”€å”®é¢</span>
       <strong>RM <?= number_format($pageTotal, 2) ?></strong>
-      <small>当前页面订单合计</small>
+      <small>å½“å‰é¡µé¢è®¢å•åˆè®¡</small>
     </div>
 
     <div class="summary-card">
-      <span>本页已付款</span>
+      <span>æœ¬é¡µå·²ä»˜æ¬¾</span>
       <strong><?= $paidCount ?></strong>
       <small>Paid orders</small>
     </div>
 
     <div class="summary-card">
-      <span>本页未付款</span>
+      <span>æœ¬é¡µæœªä»˜æ¬¾</span>
       <strong><?= $pendingCount ?></strong>
       <small>Pending orders</small>
     </div>
@@ -522,15 +303,15 @@ foreach ($orders as $order) {
   <form method="get" class="search-form">
     <input type="text"
            name="search"
-           placeholder="输入订单号"
+           placeholder="è¾“å…¥è®¢å•å·"
            value="<?= htmlspecialchars($search) ?>">
 
     <input type="month"
            name="month"
            value="<?= htmlspecialchars($month) ?>">
 
-    <button type="submit" class="btn btn-edit">🔍 搜索</button>
-    <a href="orders.php" class="btn btn-move">重置</a>
+    <button type="submit" class="btn btn-edit">ðŸ” æœç´¢</button>
+    <a href="orders.php" class="btn btn-move">é‡ç½®</a>
   </form>
 
   <form method="post" onsubmit="return confirmBatchAction(event);">
@@ -544,27 +325,27 @@ foreach ($orders as $order) {
           <th>
             <input type="checkbox" class="select-check" onclick="toggleSelectAll(this)">
           </th>
-          <th>订单号</th>
-          <th>下单时间</th>
-          <th>总金额</th>
-          <th>付款状态</th>
-          <th>操作</th>
+          <th>è®¢å•å·</th>
+          <th>ä¸‹å•æ—¶é—´</th>
+          <th>æ€»é‡‘é¢</th>
+          <th>ä»˜æ¬¾çŠ¶æ€</th>
+          <th>æ“ä½œ</th>
         </tr>
 
         <?php if(empty($orders)): ?>
           <tr>
             <td colspan="6">
-              <div class="empty-state">暂无订单记录</div>
+              <div class="empty-state">æš‚æ— è®¢å•è®°å½•</div>
             </td>
           </tr>
         <?php endif; ?>
 
         <?php foreach ($orders as $o): ?>
           <?php
-            $timeFormatted = date("Y年n月j日 H:i", strtotime($o['created_at']));
+            $timeFormatted = date("Yå¹´næœˆjæ—¥ H:i", strtotime($o['created_at']));
             $orderRegion = strtolower(trim((string)($o['region'] ?? '')));
             $isEastMalaysia = $orderRegion === 'east';
-            $regionLabel = $isEastMalaysia ? '东马订单' : '西马订单';
+            $regionLabel = $isEastMalaysia ? 'ä¸œé©¬è®¢å•' : 'è¥¿é©¬è®¢å•';
             $hasGift = (float)$o['total'] >= 29.90;
           ?>
 
@@ -594,11 +375,11 @@ foreach ($orders as $order) {
               </span>
               <div class="amount-details">
                 <div><?= $regionLabel ?></div>
-                <div>运费 RM <?= number_format((float)($o['shipping'] ?? 0), 2) ?></div>
+                <div>è¿è´¹ RM <?= number_format((float)($o['shipping'] ?? 0), 2) ?></div>
                 <?php if ($hasGift): ?>
-                  <div class="amount-gift">赠：1包魔芋爽 + 小挂件</div>
+                  <div class="amount-gift">èµ ï¼š1åŒ…é­”èŠ‹çˆ½ + å°æŒ‚ä»¶</div>
                 <?php else: ?>
-                  <div>赠：无</div>
+                  <div>èµ ï¼šæ— </div>
                 <?php endif; ?>
               </div>
             </td>
@@ -606,11 +387,11 @@ foreach ($orders as $order) {
             <td>
               <?php if ($o['status'] === 'paid'): ?>
                 <span class="status-badge status-paid">
-                  ✅ 已付款
+                  âœ… å·²ä»˜æ¬¾
                 </span>
               <?php else: ?>
                 <span class="status-badge status-pending">
-                  ❌ 未付款
+                  âŒ æœªä»˜æ¬¾
                 </span>
               <?php endif; ?>
             </td>
@@ -622,35 +403,35 @@ foreach ($orders as $order) {
                           name="mark_unpaid_id"
                           value="<?= (int)$o['id'] ?>"
                           class="btn btn-move"
-                          onclick="return confirm('确定改为未付款吗？')">
-                    未付款
+                          onclick="return confirm('ç¡®å®šæ”¹ä¸ºæœªä»˜æ¬¾å—ï¼Ÿ')">
+                    æœªä»˜æ¬¾
                   </button>
                 <?php else: ?>
                   <button type="submit"
                           name="mark_paid_id"
                           value="<?= (int)$o['id'] ?>"
                           class="btn btn-edit"
-                          onclick="return confirm('确定改为已付款吗？')">
-                    已付款
+                          onclick="return confirm('ç¡®å®šæ”¹ä¸ºå·²ä»˜æ¬¾å—ï¼Ÿ')">
+                    å·²ä»˜æ¬¾
                   </button>
                 <?php endif; ?>
                 <button type="submit"
                         name="archive_order_id"
                         value="<?= (int)$o['id'] ?>"
                         class="btn btn-delete">
-                  归档
+                  å½’æ¡£
                 </button>
                 <button type="submit"
                         name="delete_order_id"
                         value="<?= (int)$o['id'] ?>"
                         class="btn btn-delete"
-                        onclick="return confirm('确定要永久删除这笔订单吗？此操作不可恢复！')">
-                  删除
+                        onclick="return confirm('ç¡®å®šè¦æ°¸ä¹…åˆ é™¤è¿™ç¬”è®¢å•å—ï¼Ÿæ­¤æ“ä½œä¸å¯æ¢å¤ï¼')">
+                  åˆ é™¤
                 </button>
                 <a href="../frontend/receipt.php?order_number=<?= urlencode($o['order_number']) ?>&token=admin"
                    target="_blank"
                    class="btn btn-move receipt-btn">
-                   🧾 收据
+                   ðŸ§¾ æ”¶æ®
                 </a>
               </div>
             </td>
@@ -674,3 +455,4 @@ foreach ($orders as $order) {
 
 </body>
 </html>
+

@@ -1,11 +1,12 @@
 <?php
+// åº“å­˜ç®¡ç†é¡µï¼šæŸ¥çœ‹å’Œç»´æŠ¤å•†å“ SKUã€å˜ä½“åº“å­˜ä¸Žä½Žåº“å­˜çŠ¶æ€ã€‚
 require __DIR__ . '/auth_admin.php';
 require __DIR__ . '/../config.php';
 
 date_default_timezone_set("Asia/Kuala_Lumpur");
 
 // ====================
-// 分类分组（从数据库读取）
+// åˆ†ç±»åˆ†ç»„ï¼ˆä»Žæ•°æ®åº“è¯»å–ï¼‰
 // ====================
 $stmt = $pdo->query("SELECT
     g.group_key,
@@ -64,7 +65,7 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS inventory_movements (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
 // ====================
-// 更新库存 / 预警值
+// æ›´æ–°åº“å­˜ / é¢„è­¦å€¼
 // ====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
     $id = intval($_POST['id']);
@@ -81,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
             }
             $stmt->execute([$id]);
             $current = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$current) throw new RuntimeException('找不到库存项目');
+            if (!$current) throw new RuntimeException('æ‰¾ä¸åˆ°åº“å­˜é¡¹ç›®');
 
             $oldStock = (int)$current['stock'];
             if ($newStock !== $oldStock) {
@@ -110,12 +111,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
         $stmt->execute([intval($_POST['warning_level']), $id]);
     }
 
-    header("Location: inventory.php?group=" . urlencode($selectedGroup) . "&cat=" . urlencode($cat) . "&msg=" . urlencode("✅ 更新成功"));
+    header("Location: inventory.php?group=" . urlencode($selectedGroup) . "&cat=" . urlencode($cat) . "&msg=" . urlencode("âœ… æ›´æ–°æˆåŠŸ"));
     exit;
 }
 
 // ====================
-// 查询商品
+// æŸ¥è¯¢å•†å“
 // ====================
 if ($selectedCat !== '') {
     $stmt = $pdo->prepare("SELECT id, sku, name, image_url, stock, warning_level, category, product_type FROM products WHERE category=? AND parent_product_id IS NULL ORDER BY id DESC");
@@ -194,246 +195,13 @@ $movements = [];
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>库存管理</title>
+<title>åº“å­˜ç®¡ç†</title>
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 
 <link rel="stylesheet" href="/yummy-diary/backend/css/admin_layout.css">
 
 <style>
-  .inventory-summary{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-    gap:14px;
-    margin-bottom:22px;
-  }
-
-  .summary-card{
-    background:#fffaf4;
-    border:1px solid var(--line);
-    border-radius:22px;
-    padding:18px;
-    box-shadow:0 10px 28px rgba(120,90,60,.08);
-  }
-
-  .summary-card span{
-    display:block;
-    color:var(--muted);
-    font-size:13px;
-    font-weight:700;
-    margin-bottom:6px;
-  }
-
-  .summary-card strong{
-    font-size:26px;
-    color:var(--text);
-  }
-
-  .inventory-table td{
-    vertical-align:middle;
-  }
-
-  .inventory-name{
-    text-align:left;
-    font-weight:700;
-    line-height:1.5;
-    min-width:260px;
-  }
-
-  .inventory-category{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    padding:7px 12px;
-    border-radius:999px;
-    background:#fffaf4;
-    border:1px solid var(--line);
-    color:var(--muted);
-    font-weight:700;
-    font-size:13px;
-    white-space:nowrap;
-  }
-
-  .stock-form{
-    display:flex;
-    justify-content:center;
-    gap:8px;
-    align-items:center;
-  }
-
-  .stock-form input{
-    width:82px;
-    text-align:center;
-    padding:10px 8px;
-  }
-
-  .quick-actions{
-    display:flex;
-    justify-content:center;
-    gap:8px;
-    flex-wrap:wrap;
-  }
-
-  .quick-actions form{
-    margin:0;
-  }
-
-  .stock-low{
-    color:#d97706;
-    font-weight:800;
-    background:#fff7ed;
-    border-color:#fed7aa;
-  }
-
-  .stock-ok{
-    color:#3b2a20;
-    font-weight:800;
-  }
-
-  .low-badge{
-    display:inline-flex;
-    margin-top:6px;
-    padding:4px 8px;
-    border-radius:999px;
-    background:#fff7ed;
-    color:#d97706;
-    font-size:12px;
-    font-weight:800;
-  }
-
-  .empty-image{
-    width:62px;
-    height:62px;
-    border-radius:16px;
-    background:#fff7f0;
-    border:1px dashed var(--line);
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    color:var(--muted);
-    font-size:12px;
-  }
-
-  .variant-inventory-row{
-    background:#fffaf4;
-  }
-
-  .grouped-parent-row{
-    background:#fff;
-  }
-
-  .grouped-parent-row td{
-    border-bottom:0;
-  }
-
-  .variant-inventory-row td{
-    border-top:1px dashed #ead8c8;
-  }
-
-  .page-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
-  .report-open{white-space:nowrap;}
-  .pagination{display:flex;justify-content:center;align-items:center;gap:8px;margin:20px 0;}
-  .pagination span{color:var(--muted);font-size:13px;}
-  .report-modal{display:none;position:fixed;inset:0;z-index:99999;background:rgba(35,25,20,.48);padding:28px;}
-  .report-modal.show{display:flex;align-items:center;justify-content:center;}
-  .report-panel{width:min(1050px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:24px;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.22);}
-  .report-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;}
-  .report-head h3{margin:0 0 4px;font-size:22px}.report-head p{margin:0;color:var(--muted);font-size:13px;}
-  .report-filter{display:flex;gap:8px;align-items:center;margin-bottom:16px;}
-  .report-filter input{padding:10px 12px;border:1px solid var(--line);border-radius:12px;}
-  .group-toggle{cursor:pointer;}
-  .group-toggle[aria-expanded="true"]::after{content:' ▲';}
-  .group-toggle[aria-expanded="false"]::after{content:' ▼';}
-  .variant-inventory-row.is-collapsed{display:none;}
-  .report-product{display:flex;align-items:center;gap:10px;min-width:230px;text-align:left;}
-  .report-product img,.report-image-empty{width:48px;height:48px;flex:0 0 48px;border-radius:10px;object-fit:contain;background:#fffaf4;border:1px solid var(--line);}
-  .report-tabs{display:flex;gap:8px;margin:0 0 16px;}
-  .report-tab[aria-selected="true"]{background:#ead2b5;color:var(--text);}
-  .report-view[hidden]{display:none!important;}
-  .order-detail-card{border:1px solid var(--line);border-radius:18px;margin-bottom:12px;overflow:hidden;}
-  .order-detail-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 16px;background:#fffaf4;}
-  .order-detail-head span{color:var(--muted);font-size:13px;}
-  .order-detail-toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:0;border:0;background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer;}
-  .order-detail-toggle::after{content:'▼';font-size:12px;color:var(--muted);}
-  .order-detail-toggle[aria-expanded="true"]::after{content:'▲';}
-  .order-detail-items[hidden]{display:none;}
-  .order-detail-item{display:grid;grid-template-columns:minmax(260px,1fr) 130px 110px;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--line);}
-  .deduct-qty{font-weight:800;color:#dc2626;text-align:center;}
-  .movement-change{font-weight:800;white-space:nowrap;}
-  .movement-change.positive{color:#15803d}.movement-change.negative{color:#dc2626}
-  .movement-section{display:none;}
-
-  @media(max-width:768px){
-    main{padding-left:12px!important;padding-right:12px!important;}
-    .page-header{margin-bottom:14px;}
-    .inventory-summary{grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
-    .summary-card{padding:12px 10px;border-radius:16px;}
-    .summary-card span{font-size:11px}.summary-card strong{font-size:20px;}
-    .category-filter{display:grid!important;grid-template-columns:1fr 1fr;gap:8px;padding:12px!important;}
-    .category-filter select,.category-filter .btn{width:100%;min-width:0;margin:0;}
-    .table-wrapper{
-      overflow:visible;
-    }
-
-    .inventory-table,
-    .inventory-table tbody,
-    .inventory-table tr,
-    .inventory-table td{
-      display:block;
-      width:100%;
-    }
-
-    .inventory-table tr{
-      margin-bottom:14px;
-      padding:12px;
-      border:1px solid var(--line);
-      border-radius:20px;
-      background:#fff;
-    }
-
-    .inventory-table th{
-      display:none;
-    }
-
-    .inventory-table td{
-      border:0;
-      padding:8px 0;
-      text-align:left;
-    }
-
-    .stock-form,
-    .quick-actions{
-      justify-content:flex-start;
-      flex-wrap:wrap;
-    }
-
-    .stock-form input{
-      width:100px;
-    }
-    .inventory-table td[data-label]{display:grid;grid-template-columns:74px minmax(0,1fr);align-items:center;gap:8px;}
-    .inventory-table td[data-label]::before{content:attr(data-label);color:var(--muted);font-size:12px;font-weight:700;}
-    .inventory-table td.inventory-name{min-width:0;font-size:14px;}
-    .inventory-table .thumb,.empty-image{width:52px;height:52px;}
-    .inventory-category{white-space:normal;text-align:left;overflow-wrap:anywhere;}
-    .stock-form{display:grid;grid-template-columns:minmax(0,1fr) auto;width:100%;}
-    .stock-form input{width:100%!important;min-width:0;}
-    .quick-actions{display:grid;grid-template-columns:1fr 1fr;width:100%;}
-    .quick-actions .btn{width:100%;}
-    .page-header{align-items:center}.page-title p{display:none}.report-open{padding:10px!important;font-size:13px;}
-    .report-modal{padding:0;align-items:flex-end!important}.report-panel{max-height:90vh;border-radius:22px 22px 0 0;padding:14px;}
-    .report-filter{display:grid;grid-template-columns:1fr auto}.report-filter input{width:100%;}
-    .report-panel .table-wrapper{overflow:visible;}
-    .report-panel .inventory-table tr{padding:12px;margin-bottom:10px;}
-    .report-panel .inventory-table td[data-label]{grid-template-columns:82px minmax(0,1fr);padding:6px 0;}
-    .report-panel .inventory-table td:first-child{display:block;}
-    .report-product{min-width:0;font-size:14px;padding-bottom:8px;border-bottom:1px solid var(--line);}
-    .report-product img,.report-image-empty{width:58px;height:58px;flex-basis:58px;}
-    .report-panel{padding-bottom:100px;}
-    .report-tabs{display:grid;grid-template-columns:1fr 1fr;position:sticky;top:-14px;background:#fff;padding:8px 0;z-index:2;}
-    .order-detail-head{display:block}.order-detail-toggle span{display:block;margin-top:3px;}
-    .order-detail-item{grid-template-columns:1fr auto;padding:10px;}
-    .order-detail-item>span:nth-child(2){grid-column:1/2;color:var(--muted);font-size:12px;padding-left:68px;}
-    .order-detail-item .deduct-qty{grid-column:2;grid-row:1/3;}
-  }
+<?php include __DIR__ . '/assets/css/inventory.css'; ?>
 </style>
 </head>
 
@@ -444,10 +212,10 @@ $movements = [];
 <main>
   <section class="page-header">
     <div class="page-title">
-      <h2>库存管理</h2>
-      <p>查看商品图片、库存数量、预警值和快速调整库存</p>
+      <h2>åº“å­˜ç®¡ç†</h2>
+      <p>æŸ¥çœ‹å•†å“å›¾ç‰‡ã€åº“å­˜æ•°é‡ã€é¢„è­¦å€¼å’Œå¿«é€Ÿè°ƒæ•´åº“å­˜</p>
     </div>
-    <button type="button" class="btn btn-edit report-open" id="openReport">库存扣减记录</button>
+    <button type="button" class="btn btn-edit report-open" id="openReport">åº“å­˜æ‰£å‡è®°å½•</button>
   </section>
 
   <?php
@@ -470,24 +238,24 @@ $movements = [];
 
   <section class="inventory-summary">
     <div class="summary-card">
-      <span>商品数量</span>
+      <span>å•†å“æ•°é‡</span>
       <strong><?= $totalProducts ?></strong>
     </div>
 
     <div class="summary-card">
-      <span>总库存</span>
+      <span>æ€»åº“å­˜</span>
       <strong><?= $totalStock ?></strong>
     </div>
 
     <div class="summary-card">
-      <span>库存不足</span>
+      <span>åº“å­˜ä¸è¶³</span>
       <strong><?= $lowStockCount ?></strong>
     </div>
   </section>
 
   <form class="category-filter" method="get">
     <select id="groupSelect" name="group">
-      <option value="">全部大分类</option>
+      <option value="">å…¨éƒ¨å¤§åˆ†ç±»</option>
       <?php foreach ($categoryGroups as $groupKey => $group): ?>
         <option value="<?= htmlspecialchars($groupKey) ?>" <?= ($selectedGroup === $groupKey) ? 'selected' : '' ?>>
           <?= htmlspecialchars($group['label']) ?>
@@ -496,7 +264,7 @@ $movements = [];
     </select>
 
     <select id="catSelect" name="cat">
-      <option value="">全部小分类</option>
+      <option value="">å…¨éƒ¨å°åˆ†ç±»</option>
       <?php foreach ($categoryGroups as $groupKey => $group): ?>
         <?php foreach ($group['children'] as $key => $label): ?>
           <option value="<?= htmlspecialchars($key) ?>"
@@ -508,8 +276,8 @@ $movements = [];
       <?php endforeach; ?>
     </select>
 
-    <button type="submit" class="btn btn-edit">筛选</button>
-    <a href="inventory.php" class="btn btn-move">重置</a>
+    <button type="submit" class="btn btn-edit">ç­›é€‰</button>
+    <a href="inventory.php" class="btn btn-move">é‡ç½®</a>
   </form>
 
   <?php if($msg): ?>
@@ -521,12 +289,12 @@ $movements = [];
       <tr>
         <th>ID</th>
         <th>SKU</th>
-        <th>图片</th>
-        <th>商品名</th>
-        <th>分类</th>
-        <th>库存</th>
-        <th>预警值</th>
-        <th>操作</th>
+        <th>å›¾ç‰‡</th>
+        <th>å•†å“å</th>
+        <th>åˆ†ç±»</th>
+        <th>åº“å­˜</th>
+        <th>é¢„è­¦å€¼</th>
+        <th>æ“ä½œ</th>
       </tr>
 
       <?php foreach($displayProducts as $p): ?>
@@ -540,7 +308,7 @@ $movements = [];
           <td data-label="ID"><?= $p['id'] ?></td>
           <td data-label="SKU"><?= htmlspecialchars($p['sku']) ?></td>
 
-          <td data-label="图片">
+          <td data-label="å›¾ç‰‡">
             <?php if(!empty($p['image_url'])): ?>
               <img src="<?= htmlspecialchars(productImageUrl($p['image_url']), ENT_QUOTES) ?>"
                    onerror="this.remove();"
@@ -550,25 +318,25 @@ $movements = [];
             <?php endif; ?>
           </td>
 
-          <td class="inventory-name" data-label="商品名">
+          <td class="inventory-name" data-label="å•†å“å">
             <?= htmlspecialchars($p['name']) ?>
-            <br><small><strong><?= $isGrouped ? '分类商品' : '单商品' ?></strong></small>
+            <br><small><strong><?= $isGrouped ? 'åˆ†ç±»å•†å“' : 'å•å•†å“' ?></strong></small>
 
             <?php if($isLow): ?>
               <br>
-              <span class="low-badge">⚠️ 库存不足</span>
+              <span class="low-badge">âš ï¸ åº“å­˜ä¸è¶³</span>
             <?php endif; ?>
           </td>
 
-          <td data-label="分类">
+          <td data-label="åˆ†ç±»">
             <span class="inventory-category">
               <?= isset($p['category'], $flatCategories[$p['category']])
                   ? htmlspecialchars($flatCategories[$p['category']])
-                  : '未分类' ?>
+                  : 'æœªåˆ†ç±»' ?>
             </span>
           </td>
 
-          <td data-label="库存">
+          <td data-label="åº“å­˜">
             <?php if(!$isGrouped): ?><form method="post" class="stock-form">
               <input type="hidden" name="id" value="<?= $p['id'] ?>">
               <input type="number"
@@ -576,46 +344,46 @@ $movements = [];
                      value="<?= $displayStock ?>"
                      <?= $isGrouped ? 'disabled' : '' ?>
                      class="<?= $isLow ? 'stock-low' : 'stock-ok' ?>">
-              <button type="submit" class="btn btn-edit" <?= $isGrouped ? 'disabled' : '' ?>>💾 更新</button>
-            </form><?php else: ?><span class="inventory-category">由分类项目管理</span><?php endif; ?>
+              <button type="submit" class="btn btn-edit" <?= $isGrouped ? 'disabled' : '' ?>>ðŸ’¾ æ›´æ–°</button>
+            </form><?php else: ?><span class="inventory-category">ç”±åˆ†ç±»é¡¹ç›®ç®¡ç†</span><?php endif; ?>
           </td>
 
-          <td data-label="预警值">
+          <td data-label="é¢„è­¦å€¼">
             <form method="post" class="stock-form">
               <input type="hidden" name="id" value="<?= $p['id'] ?>">
               <input type="number"
                      name="warning_level"
                      value="<?= $p['warning_level'] ?>">
-              <button type="submit" class="btn btn-move">⚙️ 设定</button>
+              <button type="submit" class="btn btn-move">âš™ï¸ è®¾å®š</button>
             </form>
           </td>
 
-          <td data-label="操作">
+          <td data-label="æ“ä½œ">
             <?php if(!$isGrouped): ?><div class="quick-actions">
               <form method="post">
                 <input type="hidden" name="id" value="<?= $p['id'] ?>">
                 <input type="hidden" name="stock" value="<?= $p['stock'] + 1 ?>">
-                <button type="submit" class="btn btn-move">➕ 增加 1</button>
+                <button type="submit" class="btn btn-move">âž• å¢žåŠ  1</button>
               </form>
 
               <form method="post">
                 <input type="hidden" name="id" value="<?= $p['id'] ?>">
                 <input type="hidden" name="stock" value="<?= max(0, $p['stock'] - 1) ?>">
-                <button type="submit" class="btn btn-delete">➖ 减少 1</button>
+                <button type="submit" class="btn btn-delete">âž– å‡å°‘ 1</button>
               </form>
-            </div><?php else: ?><button type="button" class="btn btn-move group-toggle" data-group-id="<?= (int)$p['id'] ?>" aria-expanded="false">查看分类</button><?php endif; ?>
+            </div><?php else: ?><button type="button" class="btn btn-move group-toggle" data-group-id="<?= (int)$p['id'] ?>" aria-expanded="false">æŸ¥çœ‹åˆ†ç±»</button><?php endif; ?>
           </td>
         </tr>
         <?php if($isGrouped): foreach($variantsByProduct[(int)$p['id']] ?? [] as $variant): $variantLow=(int)$variant['stock'] < (int)$variant['warning_level']; ?>
           <tr class="variant-inventory-row is-collapsed" data-parent-id="<?= (int)$p['id'] ?>">
-            <td data-label="ID">↳ <?= (int)$variant['id'] ?></td>
+            <td data-label="ID">â†³ <?= (int)$variant['id'] ?></td>
             <td data-label="SKU"><?= htmlspecialchars($variant['sku']) ?></td>
-            <td data-label="图片"><?php if(!empty($variant['image_url'])): ?><img src="<?= htmlspecialchars(productImageUrl($variant['image_url']), ENT_QUOTES) ?>" class="thumb" onerror="this.remove();"><?php endif; ?></td>
-            <td class="inventory-name" data-label="商品名"><?= htmlspecialchars($variant['variant_name']) ?><br><small>分类项目</small><?php if($variantLow): ?><br><span class="low-badge">库存不足</span><?php endif; ?></td>
-            <td data-label="分类"><span class="inventory-category">属于：<?= htmlspecialchars($p['name']) ?></span></td>
-            <td data-label="库存"><form method="post" class="stock-form"><input type="hidden" name="id" value="<?= (int)$variant['id'] ?>"><input type="hidden" name="target_type" value="variant"><input type="number" name="stock" value="<?= (int)$variant['stock'] ?>" class="<?= $variantLow?'stock-low':'stock-ok' ?>"><button class="btn btn-edit">更新</button></form></td>
-            <td data-label="预警值"><?= (int)$variant['warning_level'] ?></td>
-            <td data-label="操作"><div class="quick-actions"><form method="post"><input type="hidden" name="id" value="<?= (int)$variant['id'] ?>"><input type="hidden" name="target_type" value="variant"><input type="hidden" name="stock" value="<?= (int)$variant['stock']+1 ?>"><button class="btn btn-move">＋1</button></form><form method="post"><input type="hidden" name="id" value="<?= (int)$variant['id'] ?>"><input type="hidden" name="target_type" value="variant"><input type="hidden" name="stock" value="<?= max(0,(int)$variant['stock']-1) ?>"><button class="btn btn-delete">－1</button></form></div></td>
+            <td data-label="å›¾ç‰‡"><?php if(!empty($variant['image_url'])): ?><img src="<?= htmlspecialchars(productImageUrl($variant['image_url']), ENT_QUOTES) ?>" class="thumb" onerror="this.remove();"><?php endif; ?></td>
+            <td class="inventory-name" data-label="å•†å“å"><?= htmlspecialchars($variant['variant_name']) ?><br><small>åˆ†ç±»é¡¹ç›®</small><?php if($variantLow): ?><br><span class="low-badge">åº“å­˜ä¸è¶³</span><?php endif; ?></td>
+            <td data-label="åˆ†ç±»"><span class="inventory-category">å±žäºŽï¼š<?= htmlspecialchars($p['name']) ?></span></td>
+            <td data-label="åº“å­˜"><form method="post" class="stock-form"><input type="hidden" name="id" value="<?= (int)$variant['id'] ?>"><input type="hidden" name="target_type" value="variant"><input type="number" name="stock" value="<?= (int)$variant['stock'] ?>" class="<?= $variantLow?'stock-low':'stock-ok' ?>"><button class="btn btn-edit">æ›´æ–°</button></form></td>
+            <td data-label="é¢„è­¦å€¼"><?= (int)$variant['warning_level'] ?></td>
+            <td data-label="æ“ä½œ"><div class="quick-actions"><form method="post"><input type="hidden" name="id" value="<?= (int)$variant['id'] ?>"><input type="hidden" name="target_type" value="variant"><input type="hidden" name="stock" value="<?= (int)$variant['stock']+1 ?>"><button class="btn btn-move">ï¼‹1</button></form><form method="post"><input type="hidden" name="id" value="<?= (int)$variant['id'] ?>"><input type="hidden" name="target_type" value="variant"><input type="hidden" name="stock" value="<?= max(0,(int)$variant['stock']-1) ?>"><button class="btn btn-delete">ï¼1</button></form></div></td>
           </tr>
         <?php endforeach; endif; ?>
       <?php endforeach; ?>
@@ -623,96 +391,53 @@ $movements = [];
   </div>
 
   <section class="movement-section">
-    <h3>库存变动记录</h3>
-    <p>显示最近 50 次手动库存调整</p>
+    <h3>åº“å­˜å˜åŠ¨è®°å½•</h3>
+    <p>æ˜¾ç¤ºæœ€è¿‘ 50 æ¬¡æ‰‹åŠ¨åº“å­˜è°ƒæ•´</p>
     <div class="table-wrapper">
       <table class="inventory-table movement-table">
-        <tr><th>时间</th><th>商品</th><th>SKU</th><th>变动</th><th>库存变化</th></tr>
-        <?php if (!$movements): ?><tr><td colspan="5">暂无库存变动记录</td></tr><?php endif; ?>
+        <tr><th>æ—¶é—´</th><th>å•†å“</th><th>SKU</th><th>å˜åŠ¨</th><th>åº“å­˜å˜åŒ–</th></tr>
+        <?php if (!$movements): ?><tr><td colspan="5">æš‚æ— åº“å­˜å˜åŠ¨è®°å½•</td></tr><?php endif; ?>
         <?php foreach ($movements as $movement): $change=(int)$movement['quantity_change']; ?>
           <tr>
-            <td data-label="时间"><?= htmlspecialchars($movement['created_at']) ?></td>
-            <td data-label="商品"><?= htmlspecialchars($movement['product_name']) ?><?= $movement['target_type']==='variant' ? '（规格）' : '' ?></td>
+            <td data-label="æ—¶é—´"><?= htmlspecialchars($movement['created_at']) ?></td>
+            <td data-label="å•†å“"><?= htmlspecialchars($movement['product_name']) ?><?= $movement['target_type']==='variant' ? 'ï¼ˆè§„æ ¼ï¼‰' : '' ?></td>
             <td data-label="SKU"><?= htmlspecialchars((string)$movement['sku']) ?></td>
-            <td data-label="变动"><span class="movement-change <?= $change >= 0 ? 'positive' : 'negative' ?>"><?= $change > 0 ? '+' : '' ?><?= $change ?></span></td>
-            <td data-label="库存变化"><?= (int)$movement['stock_before'] ?> → <?= (int)$movement['stock_after'] ?></td>
+            <td data-label="å˜åŠ¨"><span class="movement-change <?= $change >= 0 ? 'positive' : 'negative' ?>"><?= $change > 0 ? '+' : '' ?><?= $change ?></span></td>
+            <td data-label="åº“å­˜å˜åŒ–"><?= (int)$movement['stock_before'] ?> â†’ <?= (int)$movement['stock_after'] ?></td>
           </tr>
         <?php endforeach; ?>
       </table>
     </div>
   </section>
   <?php if ($inventoryTotalPages > 1): ?><nav class="pagination">
-    <?php if ($inventoryPage > 1): ?><a class="btn btn-move" href="?<?= http_build_query(['group'=>$selectedGroup,'cat'=>$selectedCat,'page'=>$inventoryPage-1]) ?>">上一页</a><?php endif; ?>
-    <span>第 <?= $inventoryPage ?> / <?= $inventoryTotalPages ?> 页</span>
-    <?php if ($inventoryPage < $inventoryTotalPages): ?><a class="btn btn-move" href="?<?= http_build_query(['group'=>$selectedGroup,'cat'=>$selectedCat,'page'=>$inventoryPage+1]) ?>">下一页</a><?php endif; ?>
+    <?php if ($inventoryPage > 1): ?><a class="btn btn-move" href="?<?= http_build_query(['group'=>$selectedGroup,'cat'=>$selectedCat,'page'=>$inventoryPage-1]) ?>">ä¸Šä¸€é¡µ</a><?php endif; ?>
+    <span>ç¬¬ <?= $inventoryPage ?> / <?= $inventoryTotalPages ?> é¡µ</span>
+    <?php if ($inventoryPage < $inventoryTotalPages): ?><a class="btn btn-move" href="?<?= http_build_query(['group'=>$selectedGroup,'cat'=>$selectedCat,'page'=>$inventoryPage+1]) ?>">ä¸‹ä¸€é¡µ</a><?php endif; ?>
   </nav><?php endif; ?>
 </main>
 
 <div class="report-modal <?= isset($_GET['report_month']) ? 'show' : '' ?>" id="reportModal">
- <section class="report-panel" role="dialog" aria-modal="true"><div class="report-head"><div><h3>库存扣减与订单比对</h3><p>统计已确认且未取消的订单，手动库存调整另外列出。</p></div><button type="button" class="btn btn-move" id="closeReport">关闭</button></div>
- <form method="get" class="report-filter"><input type="hidden" name="group" value="<?= htmlspecialchars($selectedGroup) ?>"><input type="hidden" name="cat" value="<?= htmlspecialchars($selectedCat) ?>"><input type="month" name="report_month" value="<?= htmlspecialchars($reportMonth) ?>" max="<?= date('Y-m') ?>"><button class="btn btn-edit">查看月份</button></form>
- <div class="report-tabs"><button type="button" class="btn btn-move report-tab" data-report-view="summary" aria-selected="true">商品汇总</button><button type="button" class="btn btn-move report-tab" data-report-view="orders" aria-selected="false">逐单明细</button></div>
- <div class="report-view" data-view="summary"><div class="table-wrapper"><table class="inventory-table"><tr><th>商品</th><th>SKU</th><th>订单数</th><th>订单应扣</th><th>手动调整</th><th>合计变化</th></tr>
- <?php if (!$orderReport): ?><tr><td colspan="6">这个月份没有已确认订单记录</td></tr><?php endif; ?>
- <?php foreach ($orderReport as $row): $manual=$manualBySku[(string)$row['sku']] ?? 0; $ordered=(int)$row['order_quantity']; $net=$manual-$ordered; ?><tr><td data-label="商品"><div class="report-product"><?php if(!empty($row['image_url'])): ?><img src="<?= htmlspecialchars(productImageUrl($row['image_url']),ENT_QUOTES) ?>" alt="" onerror="this.style.display='none'"> <?php else: ?><span class="report-image-empty"></span><?php endif; ?><strong><?= htmlspecialchars($row['product_name']) ?></strong></div></td><td data-label="SKU"><?= htmlspecialchars($row['sku']) ?></td><td data-label="订单数"><?= (int)$row['order_count'] ?></td><td data-label="订单应扣" class="movement-change negative">－<?= $ordered ?></td><td data-label="手动调整" class="movement-change <?= $manual>=0?'positive':'negative' ?>"><?= $manual>0?'+':'' ?><?= $manual ?></td><td data-label="合计变化" class="movement-change <?= $net>=0?'positive':'negative' ?>"><?= $net>0?'+':'' ?><?= $net ?></td></tr><?php endforeach; ?>
+ <section class="report-panel" role="dialog" aria-modal="true"><div class="report-head"><div><h3>åº“å­˜æ‰£å‡ä¸Žè®¢å•æ¯”å¯¹</h3><p>ç»Ÿè®¡å·²ç¡®è®¤ä¸”æœªå–æ¶ˆçš„è®¢å•ï¼Œæ‰‹åŠ¨åº“å­˜è°ƒæ•´å¦å¤–åˆ—å‡ºã€‚</p></div><button type="button" class="btn btn-move" id="closeReport">å…³é—­</button></div>
+ <form method="get" class="report-filter"><input type="hidden" name="group" value="<?= htmlspecialchars($selectedGroup) ?>"><input type="hidden" name="cat" value="<?= htmlspecialchars($selectedCat) ?>"><input type="month" name="report_month" value="<?= htmlspecialchars($reportMonth) ?>" max="<?= date('Y-m') ?>"><button class="btn btn-edit">æŸ¥çœ‹æœˆä»½</button></form>
+ <div class="report-tabs"><button type="button" class="btn btn-move report-tab" data-report-view="summary" aria-selected="true">å•†å“æ±‡æ€»</button><button type="button" class="btn btn-move report-tab" data-report-view="orders" aria-selected="false">é€å•æ˜Žç»†</button></div>
+ <div class="report-view" data-view="summary"><div class="table-wrapper"><table class="inventory-table"><tr><th>å•†å“</th><th>SKU</th><th>è®¢å•æ•°</th><th>è®¢å•åº”æ‰£</th><th>æ‰‹åŠ¨è°ƒæ•´</th><th>åˆè®¡å˜åŒ–</th></tr>
+ <?php if (!$orderReport): ?><tr><td colspan="6">è¿™ä¸ªæœˆä»½æ²¡æœ‰å·²ç¡®è®¤è®¢å•è®°å½•</td></tr><?php endif; ?>
+ <?php foreach ($orderReport as $row): $manual=$manualBySku[(string)$row['sku']] ?? 0; $ordered=(int)$row['order_quantity']; $net=$manual-$ordered; ?><tr><td data-label="å•†å“"><div class="report-product"><?php if(!empty($row['image_url'])): ?><img src="<?= htmlspecialchars(productImageUrl($row['image_url']),ENT_QUOTES) ?>" alt="" onerror="this.style.display='none'"> <?php else: ?><span class="report-image-empty"></span><?php endif; ?><strong><?= htmlspecialchars($row['product_name']) ?></strong></div></td><td data-label="SKU"><?= htmlspecialchars($row['sku']) ?></td><td data-label="è®¢å•æ•°"><?= (int)$row['order_count'] ?></td><td data-label="è®¢å•åº”æ‰£" class="movement-change negative">ï¼<?= $ordered ?></td><td data-label="æ‰‹åŠ¨è°ƒæ•´" class="movement-change <?= $manual>=0?'positive':'negative' ?>"><?= $manual>0?'+':'' ?><?= $manual ?></td><td data-label="åˆè®¡å˜åŒ–" class="movement-change <?= $net>=0?'positive':'negative' ?>"><?= $net>0?'+':'' ?><?= $net ?></td></tr><?php endforeach; ?>
  </table></div></div>
  <div class="report-view" data-view="orders" hidden>
-  <?php if (!$ordersDetail): ?><div class="order-detail-card"><div class="order-detail-head">这个月份没有已确认订单</div></div><?php endif; ?>
+  <?php if (!$ordersDetail): ?><div class="order-detail-card"><div class="order-detail-head">è¿™ä¸ªæœˆä»½æ²¡æœ‰å·²ç¡®è®¤è®¢å•</div></div><?php endif; ?>
   <?php foreach ($ordersDetail as $order): ?>
-   <article class="order-detail-card"><header class="order-detail-head"><button type="button" class="order-detail-toggle" aria-expanded="false"><span><strong>订单 <?= htmlspecialchars($order['order_number']) ?></strong><small><?= count($order['items']) ?> 项商品</small></span><span><?= htmlspecialchars(date('Y-m-d H:i',strtotime($order['created_at']))) ?></span></button></header>
-   <div class="order-detail-items" hidden><?php foreach ($order['items'] as $item): ?><div class="order-detail-item"><div class="report-product"><?php if(!empty($item['image_url'])): ?><img src="<?= htmlspecialchars(productImageUrl($item['image_url']),ENT_QUOTES) ?>" alt="" onerror="this.style.display='none'"><?php else: ?><span class="report-image-empty"></span><?php endif; ?><strong><?= htmlspecialchars($item['product_name']) ?></strong></div><span>SKU：<?= htmlspecialchars($item['sku']) ?></span><span class="deduct-qty">扣减 －<?= (int)$item['quantity'] ?></span></div><?php endforeach; ?></div>
+   <article class="order-detail-card"><header class="order-detail-head"><button type="button" class="order-detail-toggle" aria-expanded="false"><span><strong>è®¢å• <?= htmlspecialchars($order['order_number']) ?></strong><small><?= count($order['items']) ?> é¡¹å•†å“</small></span><span><?= htmlspecialchars(date('Y-m-d H:i',strtotime($order['created_at']))) ?></span></button></header>
+   <div class="order-detail-items" hidden><?php foreach ($order['items'] as $item): ?><div class="order-detail-item"><div class="report-product"><?php if(!empty($item['image_url'])): ?><img src="<?= htmlspecialchars(productImageUrl($item['image_url']),ENT_QUOTES) ?>" alt="" onerror="this.style.display='none'"><?php else: ?><span class="report-image-empty"></span><?php endif; ?><strong><?= htmlspecialchars($item['product_name']) ?></strong></div><span>SKUï¼š<?= htmlspecialchars($item['sku']) ?></span><span class="deduct-qty">æ‰£å‡ ï¼<?= (int)$item['quantity'] ?></span></div><?php endforeach; ?></div>
    </article>
   <?php endforeach; ?>
  </div></section>
 </div>
 
 <script>
-(function () {
-  const reportModal = document.getElementById('reportModal');
-  const setReportOpen = open => { reportModal.classList.toggle('show', open); document.body.style.overflow = open ? 'hidden' : ''; };
-  document.getElementById('openReport')?.addEventListener('click', () => setReportOpen(true));
-  document.getElementById('closeReport')?.addEventListener('click', () => setReportOpen(false));
-  reportModal?.addEventListener('click', event => { if (event.target === reportModal) setReportOpen(false); });
-  document.querySelectorAll('.report-tab').forEach(tab => tab.addEventListener('click', () => {
-    const selected = tab.dataset.reportView;
-    document.querySelectorAll('.report-tab').forEach(item => item.setAttribute('aria-selected', String(item === tab)));
-    document.querySelectorAll('.report-view').forEach(view => { view.hidden = view.dataset.view !== selected; });
-  }));
-  document.querySelectorAll('.order-detail-toggle').forEach(button => button.addEventListener('click', () => {
-    const open = button.getAttribute('aria-expanded') !== 'true';
-    button.setAttribute('aria-expanded', String(open));
-    button.closest('.order-detail-card').querySelector('.order-detail-items').hidden = !open;
-  }));
-  document.querySelectorAll('.group-toggle').forEach(button => button.addEventListener('click', () => {
-    const open = button.getAttribute('aria-expanded') !== 'true';
-    button.setAttribute('aria-expanded', String(open));
-    button.textContent = open ? '收起分类' : '查看分类';
-    document.querySelectorAll('.variant-inventory-row[data-parent-id="' + button.dataset.groupId + '"]').forEach(row => row.classList.toggle('is-collapsed', !open));
-  }));
-  const groupSelect = document.getElementById('groupSelect');
-  const catSelect = document.getElementById('catSelect');
-
-  function syncCategoryOptions() {
-    const group = groupSelect.value;
-    const options = Array.from(catSelect.querySelectorAll('option'));
-
-    options.forEach(function (option) {
-      const match = !group || option.getAttribute('data-group') === group || option.value === '';
-      option.hidden = !match;
-      option.disabled = !match;
-    });
-  }
-
-  if (groupSelect && catSelect) {
-    groupSelect.addEventListener('change', function () {
-      catSelect.value = '';
-      syncCategoryOptions();
-    });
-
-    syncCategoryOptions();
-  }
-})();
+<?php include __DIR__ . '/assets/js/inventory.js.php'; ?>
 </script>
 
 </body>
 </html>
+

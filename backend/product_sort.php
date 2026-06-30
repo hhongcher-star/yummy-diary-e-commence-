@@ -1,4 +1,5 @@
 <?php
+// å•†å“æŽ’åºé¡µï¼šè°ƒæ•´å•†å“æˆ–åˆ†ç±»åœ¨å‰å°å•†åº—ä¸­çš„å±•ç¤ºé¡ºåºã€‚
 require __DIR__ . '/auth_admin.php';
 require __DIR__ . '/../config.php';
 
@@ -17,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_order'])) {
 
     if (!$categoryExists || !is_array($orderedIds)) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => '排序资料无效']);
+        echo json_encode(['success' => false, 'message' => 'æŽ’åºèµ„æ–™æ— æ•ˆ']);
         exit;
     }
 
@@ -44,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_order'])) {
 
     if ($submitted !== $expected) {
         http_response_code(409);
-        echo json_encode(['success' => false, 'message' => '商品资料已改变，请刷新页面']);
+        echo json_encode(['success' => false, 'message' => 'å•†å“èµ„æ–™å·²æ”¹å˜ï¼Œè¯·åˆ·æ–°é¡µé¢']);
         exit;
     }
 
@@ -72,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_order'])) {
     } catch (Throwable $e) {
         $pdo->rollBack();
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => '保存失败']);
+        echo json_encode(['success' => false, 'message' => 'ä¿å­˜å¤±è´¥']);
     }
     exit;
 }
@@ -82,19 +83,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_order'])) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>商品排序</title>
+<title>å•†å“æŽ’åº</title>
 <link rel="stylesheet" href="/yummy-diary/backend/css/admin_layout.css?v=20260612-4">
 <style>
-  body{background:#f5f5f5;}
-  main{background:#f5f5f5;}
-  .page-title p{color:#666;}
-  .sort-mobile-only{display:none;}
-  .live-preview{width:100%;height:calc(100vh - 175px);min-height:650px;border:1px solid var(--line);border-radius:24px;background:#fff;box-shadow:var(--shadow);}
-  @media(max-width:768px){
-    .live-preview{display:none;}
-    .sort-mobile-only{display:flex;align-items:center;justify-content:center;min-height:150px;border:1px solid #f5bfd4;border-radius:18px;background:#fff;color:#6f6070;font-size:18px;font-weight:800;text-align:center;padding:24px;margin-top:30px;}
-    .sort-mobile-only .icon{display:block;font-size:28px;margin-bottom:14px;}
-  }
+<?php include __DIR__ . '/assets/css/product_sort.css'; ?>
 </style>
 </head>
 <body>
@@ -102,17 +94,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_order'])) {
 <main>
   <section class="page-header">
     <div class="page-title">
-      <h2>商品排序</h2>
-      <p>选择分类后，直接拖动前台商品卡片调整显示顺序</p>
+      <h2>å•†å“æŽ’åº</h2>
+      <p>é€‰æ‹©åˆ†ç±»åŽï¼Œç›´æŽ¥æ‹–åŠ¨å‰å°å•†å“å¡ç‰‡è°ƒæ•´æ˜¾ç¤ºé¡ºåº</p>
     </div>
   </section>
-  <iframe class="live-preview" src="<?= htmlspecialchars(appUrl('shop?sort_admin=1'), ENT_QUOTES) ?>" title="实时前台商品排序"></iframe>
+  <iframe class="live-preview" src="<?= htmlspecialchars(appUrl('shop?sort_admin=1'), ENT_QUOTES) ?>" title="å®žæ—¶å‰å°å•†å“æŽ’åº"></iframe>
   <div class="sort-mobile-only">
     <div>
-      <span class="icon">🖥️</span>
-      <div>请使用电脑打开商品排序功能。</div>
+      <span class="icon">ðŸ–¥ï¸</span>
+      <div>è¯·ä½¿ç”¨ç”µè„‘æ‰“å¼€å•†å“æŽ’åºåŠŸèƒ½ã€‚</div>
     </div>
   </div>
 </main>
 </body>
 </html>
+

@@ -1,4 +1,5 @@
 <?php
+// 后台订单 API：需要管理员权限，用于订单查询、付款状态和履约状态更新。
 require __DIR__ . '/../auth_admin.php';
 require __DIR__ . '/../../config.php';
 header('Content-Type: application/json');

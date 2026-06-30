@@ -1,3 +1,4 @@
+-- 创建初始管理员账号：导入主数据库后执行，并在首次登录后立即修改密码。
 -- Temporary administrator account for Yummy Diary.
 -- Import this file after importing the main database.
 -- Change the password immediately after the first successful login.

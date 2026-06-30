@@ -31,3 +31,4 @@ CREATE TABLE IF NOT EXISTS product_variants (
 
 ALTER TABLE product_variants
   ADD COLUMN IF NOT EXISTS source_product_id INT NULL AFTER product_id;
+-- 商品变体数据库迁移：用于增加或调整 SKU、规格、库存等商品变体结构。

@@ -1,4 +1,5 @@
 <?php
+// 全站配置：加载环境变量、生成 URL、规范图片路径，并建立数据库连接。
 function loadLocalEnvironment(string $path): void
 {
     if (!is_file($path) || !is_readable($path)) {

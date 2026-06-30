@@ -1,4 +1,8 @@
 /* ========== 基础样式 ========== */
+/*
+ * 前台主样式：控制首页、商店、联系页、商品卡片、响应式布局和通用视觉风格。
+ */
+
 body {
   margin: 0;
   font-family: 'Fredoka', 'Poppins', sans-serif;

@@ -1,4 +1,5 @@
 <?php
+// 搜索建议 API：用户输入关键词时返回匹配商品建议，供 header 搜索框使用。
 session_start();
 require __DIR__ . '/../../config.php';
 
